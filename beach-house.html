@@ -6,6 +6,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <title>Hilton Head Beach Houses</title>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -916,21 +918,74 @@ const today = new Date();
 calYear = today.getFullYear();
 calMonth = today.getMonth();
 
-const EVENTS_STORAGE_KEY = 'beach_events'; // shared across both houses
+const EVENTS_STORAGE_KEY = 'beach_events';
 let events = [];
 let editingEventId = null;
 let currentEventVisibility = 'public';
 
+// ── FIREBASE ──────────────────────────────────────────────────────────────────
+
+const firebaseConfig = {
+  apiKey: "AIzaSyA4tBPYwP6UVBwdMwvmF6nCOu-mvsD0gyg",
+  authDomain: "beach-house-8aef3.firebaseapp.com",
+  databaseURL: "https://beach-house-8aef3-default-rtdb.firebaseio.com",
+  projectId: "beach-house-8aef3",
+  storageBucket: "beach-house-8aef3.firebasestorage.app",
+  messagingSenderId: "635310409632",
+  appId: "1:635310409632:web:0a7d87a8faa54ed3cc06c5"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+let bookingsListener = null;
+let eventsListener = null;
+
+function loadBookings() {
+  if (bookingsListener) bookingsListener();
+  const ref = db.ref(`bookings/${currentHouse}`);
+  ref.on('value', snap => {
+    const val = snap.val();
+    bookings = val ? Object.values(val) : [];
+    allHouseBookings[currentHouse] = bookings;
+    renderAll();
+  });
+  bookingsListener = () => ref.off();
+}
+
+// Keep a live cache of all houses for cross-house views
+const allHouseBookings = { port: [], royal: [] };
+
+function loadAllHouses() {
+  Object.keys(HOUSES).forEach(hKey => {
+    db.ref(`bookings/${hKey}`).on('value', snap => {
+      const val = snap.val();
+      allHouseBookings[hKey] = val ? Object.values(val) : [];
+      if (currentView === 'both') renderAll();
+    });
+  });
+}
+
+function saveBookings() {
+  const obj = {};
+  bookings.forEach(b => { obj[b.id] = b; });
+  db.ref(`bookings/${currentHouse}`).set(obj);
+}
+
 function loadEvents() {
-  try {
-    const raw = localStorage.getItem(EVENTS_STORAGE_KEY);
-    events = raw ? JSON.parse(raw) : [];
-  } catch { events = []; }
+  if (eventsListener) eventsListener();
+  const ref = db.ref('events');
+  ref.on('value', snap => {
+    const val = snap.val();
+    events = val ? Object.values(val) : [];
+    renderAll();
+  });
+  eventsListener = () => ref.off();
 }
 
 function saveEvents() {
-  try { localStorage.setItem(EVENTS_STORAGE_KEY, JSON.stringify(events)); }
-  catch(e) { console.error('Save events failed', e); }
+  const obj = {};
+  events.forEach(e => { obj[e.id] = e; });
+  db.ref('events').set(obj);
 }
 
 function eventsForDate(ymd) {
@@ -940,18 +995,6 @@ function eventsForDate(ymd) {
 // ── STORAGE ──────────────────────────────────────────────────────────────────
 
 function storageKey() { return HOUSES[currentHouse].storageKey; }
-
-function loadBookings() {
-  try {
-    const raw = localStorage.getItem(storageKey());
-    bookings = raw ? JSON.parse(raw) : [];
-  } catch { bookings = []; }
-}
-
-function saveBookings() {
-  try { localStorage.setItem(storageKey(), JSON.stringify(bookings)); }
-  catch(e) { console.error('Save failed', e); }
-}
 
 // ── DATE UTILS ───────────────────────────────────────────────────────────────
 
@@ -1033,7 +1076,7 @@ function applyHouseTheme() {
 
 function switchHouse(key) {
   currentHouse = key;
-  loadBookings();
+  loadBookings(); // re-attaches Firebase listener for new house
   applyHouseTheme();
   renderAll();
 }
@@ -1466,14 +1509,11 @@ function renderBoth() {
   const tYMD = todayYMD();
   const now = new Date();
 
-  // Load both houses from localStorage
-  const allBookings = {};
-  Object.values(HOUSES).forEach(h => {
-    try {
-      const raw = localStorage.getItem(h.storageKey);
-      allBookings[h.key] = (raw ? JSON.parse(raw) : []).filter(b => b.end >= tYMD);
-    } catch { allBookings[h.key] = []; }
-  });
+  // Use live Firebase cache
+  const allBookings = {
+    port: allHouseBookings.port.filter(b => b.end >= tYMD),
+    royal: allHouseBookings.royal.filter(b => b.end >= tYMD)
+  };
 
   const combined = [...allBookings.port, ...allBookings.royal];
   if (combined.length === 0) {
@@ -1647,13 +1687,10 @@ function renderBothPeople() {
   const tYMD = todayYMD();
 
   // Load both houses
-  const allBookings = {};
-  Object.values(HOUSES).forEach(h => {
-    try {
-      const raw = localStorage.getItem(h.storageKey);
-      allBookings[h.key] = raw ? JSON.parse(raw) : [];
-    } catch { allBookings[h.key] = []; }
-  });
+  const allBookings = {
+    port: [...allHouseBookings.port],
+    royal: [...allHouseBookings.royal]
+  };
 
   // Month nav
   const nav = document.createElement('div');
@@ -1776,8 +1813,7 @@ function openBothPeopleDay(ymd, portBookings, royalBookings) {
   // Load both houses fresh
   const allB = {};
   Object.values(HOUSES).forEach(h => {
-    try { const raw = localStorage.getItem(h.storageKey); allB[h.key] = raw ? JSON.parse(raw) : []; }
-    catch { allB[h.key] = []; }
+    allB[h.key] = [...(allHouseBookings[h.key] || [])];
   });
   const pB = allB.port.filter(b => datesInRange(b.start, b.end).includes(ymd));
   const rB = allB.royal.filter(b => datesInRange(b.start, b.end).includes(ymd));
@@ -1853,11 +1889,9 @@ function editNamesFromBoth(id) {
   let found = false;
   Object.values(HOUSES).forEach(h => {
     try {
-      const raw = localStorage.getItem(h.storageKey);
-      const hBookings = raw ? JSON.parse(raw) : [];
+      const hBookings = allHouseBookings[h.key] || [];
       if (hBookings.find(b => b.id === id)) {
-        // Temporarily load that house's bookings so openNamesModal works
-        bookings = hBookings;
+        bookings = [...hBookings];
         found = true;
       }
     } catch {}
@@ -2258,10 +2292,10 @@ function moveToOtherHouse() {
 
   // Add to other house
   try {
-    const raw = localStorage.getItem(otherHouse.storageKey);
-    const otherBookings = raw ? JSON.parse(raw) : [];
-    otherBookings.push({ ...b });
-    localStorage.setItem(otherHouse.storageKey, JSON.stringify(otherBookings));
+    const otherBookings = [...(allHouseBookings[otherKey] || []), { ...b }];
+    const otherObj = {};
+    otherBookings.forEach(x => { otherObj[x.id] = x; });
+    db.ref(`bookings/${otherKey}`).set(otherObj);
   } catch(e) { console.error('Move failed', e); }
 
   closeModal('modal-form');
@@ -2372,13 +2406,14 @@ function saveGuestNames() {
   let savedDay = null;
   Object.values(HOUSES).forEach(h => {
     try {
-      const raw = localStorage.getItem(h.storageKey);
-      const hBookings = raw ? JSON.parse(raw) : [];
+      const hBookings = [...(allHouseBookings[h.key] || [])];
       const idx = hBookings.findIndex(b => b.id === editingId);
       if (idx !== -1) {
         savedDay = hBookings[idx].start;
         hBookings[idx] = { ...hBookings[idx], individuals: names };
-        localStorage.setItem(h.storageKey, JSON.stringify(hBookings));
+        const obj = {};
+        hBookings.forEach(x => { obj[x.id] = x; });
+        db.ref(`bookings/${h.key}`).set(obj);
       }
     } catch {}
   });
@@ -2576,6 +2611,7 @@ if (params.get('admin') === 'true' || localStorage.getItem('beach_admin') === 't
 }
 
 loadBookings();
+loadAllHouses();
 loadEvents();
 switchView('calendar');
 
