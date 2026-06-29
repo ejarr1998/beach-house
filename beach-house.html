@@ -882,6 +882,14 @@
 <div id="toast"></div>
 
 <script>
+// ── SERVICE WORKER ────────────────────────────────────────────────────────────
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/beach-house/sw.js')
+      .catch(err => console.log('SW registration failed:', err));
+  });
+}
+
 // ── CONFIG ──────────────────────────────────────────────────────────────────
 
 const HOUSES = {
