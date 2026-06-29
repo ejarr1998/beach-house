@@ -1,0 +1,22 @@
+{
+  "name": "Hilton Head Beach Houses",
+  "short_name": "HHI Houses",
+  "description": "Schedule manager for 5 Royal Crest Drive and 95 S Port Royal Drive",
+  "start_url": "/beach-house/beach-house.html",
+  "display": "standalone",
+  "background_color": "#f5f0e8",
+  "theme_color": "#4A8B8C",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' rx='32' fill='%234A8B8C'/><text y='130' x='96' text-anchor='middle' font-size='120' font-family='serif'>🏖️</text></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='80' fill='%234A8B8C'/><text y='360' x='256' text-anchor='middle' font-size='320' font-family='serif'>🏖️</text></svg>",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    }
+  ]
+}
