@@ -1,0 +1,2581 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>Hilton Head Beach Houses</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --sand: #f5f0e8;
+    --ink: #1a2a2a;
+    --muted: #556677;
+    --light-muted: #8899aa;
+    --surface: #ffffff;
+    --border: #e2e2dc;
+    --danger: #c0392b;
+    --danger-light: #fdf0ee;
+  }
+
+  body {
+    font-family: 'Georgia', 'Times New Roman', serif;
+    background: var(--sand);
+    color: var(--ink);
+    min-height: 100vh;
+  }
+
+  /* ── HEADER ── */
+  #header-band {
+    padding: 24px 16px 20px;
+    transition: background 0.4s ease;
+  }
+  .house-switcher {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+  }
+  .house-tab {
+    font-family: -apple-system, sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    border: none;
+    cursor: pointer;
+    padding: 6px 14px;
+    border-radius: 20px;
+    transition: all 0.15s;
+  }
+  .house-tab.active { background: rgba(0,0,0,0.2); color: #fff; }
+  .house-tab.inactive { background: rgba(255,255,255,0.5); color: #334; }
+
+  #header-eyebrow {
+    font-family: -apple-system, sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: rgba(0,0,0,0.4);
+    margin-bottom: 4px;
+  }
+  #header-title {
+    font-size: clamp(20px, 5vw, 32px);
+    font-weight: 700;
+    color: var(--ink);
+    line-height: 1.15;
+  }
+  #header-sub {
+    font-family: -apple-system, sans-serif;
+    font-size: 13px;
+    color: rgba(0,0,0,0.45);
+    margin-top: 6px;
+  }
+
+  /* ── CONTENT ── */
+  .content {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 20px 14px calc(140px + env(safe-area-inset-bottom));
+  }
+
+  /* ── FLOATING ADMIN BAR ── */
+  .admin-bar {
+    display: none; /* hidden by default, shown when admin */
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 500;
+    padding: 12px 16px;
+    padding-bottom: calc(12px + env(safe-area-inset-bottom));
+    background: rgba(255,255,255,0.92);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-top: 1px solid var(--border);
+    box-shadow: 0 -4px 20px rgba(0,0,0,0.08);
+    gap: 10px;
+    align-items: center;
+    justify-content: center;
+  }
+  .admin-bar.visible {
+    display: flex;
+  }
+  #add-btn {
+    flex: 1;
+    max-width: 260px;
+    justify-content: center;
+  }
+
+  /* ── SHARE BUTTON ── */
+  #share-btn {
+    padding: 11px 18px;
+    font-size: 14px;
+    font-family: -apple-system, sans-serif;
+    font-weight: 700;
+    border: 2px solid var(--accent);
+    border-radius: 8px;
+    cursor: pointer;
+    color: var(--accent);
+    background: transparent;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.15s, transform 0.1s;
+    white-space: nowrap;
+  }
+  #share-btn:hover { background: var(--accent-light); }
+  #share-btn:active { transform: scale(0.97); }
+  #share-btn.copied {
+    background: #2e7d52 !important;
+    border-color: #2e7d52 !important;
+    color: #fff !important;
+  }
+
+  /* Push content up so floating bar doesn't cover it */
+  .admin-spacer {
+    display: none;
+    height: 72px;
+  }
+  .admin-spacer.visible { display: block; }
+
+  /* ── TABS ── */
+  .view-tabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 18px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    scroll-snap-type: x mandatory;
+    padding-bottom: 2px;
+  }
+  .view-tabs::-webkit-scrollbar { display: none; }
+  .view-tab {
+    font-family: -apple-system, sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    padding: 8px 20px;
+    border-radius: 8px;
+    border: 2px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+    flex-shrink: 0;
+    scroll-snap-align: start;
+  }
+  .view-tab.active { color: #fff; border-color: transparent; }
+
+  /* ── CARD ── */
+  .card {
+    background: var(--surface);
+    border-radius: 14px;
+    padding: 22px;
+    box-shadow: 0 2px 18px rgba(0,0,0,0.06);
+  }
+
+  /* ── CALENDAR ── */
+  .cal-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .cal-nav-btn {
+    background: none;
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    padding: 7px 14px;
+    font-size: 16px;
+    cursor: pointer;
+    color: var(--muted);
+    font-family: inherit;
+    transition: border-color 0.15s;
+  }
+  .cal-nav-btn:hover { border-color: #aaa; }
+  .cal-month-label {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--ink);
+  }
+  .cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 3px;
+  }
+  .cal-day-header {
+    text-align: center;
+    font-family: -apple-system, sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--light-muted);
+    letter-spacing: 0.04em;
+    padding: 4px 0 6px;
+  }
+  .cal-cell {
+    min-height: 58px;
+    border-radius: 8px;
+    padding: 5px 6px;
+    cursor: pointer;
+    transition: background 0.12s;
+    background: #fafaf8;
+    border: 2px solid transparent;
+    position: relative;
+    overflow: hidden;
+  }
+  .cal-cell:hover { background: #eef5f5; }
+  .cal-cell.today { border-color: var(--accent, #4A8B8C); background: var(--accent-light, #D6ECEC); }
+  .cal-cell.has-bookings { background: #f0f7f6; }
+  .cal-cell-day {
+    font-size: 13px;
+    font-weight: 500;
+    color: #334;
+    line-height: 1;
+  }
+  .cal-cell.today .cal-cell-day { font-weight: 800; }
+  .cal-chip {
+    margin-top: 2px;
+    font-size: 10px;
+    font-weight: 600;
+    color: #fff;
+    border-radius: 3px;
+    padding: 1px 5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-family: -apple-system, sans-serif;
+  }
+  .cal-more {
+    font-size: 10px;
+    font-weight: 700;
+    margin-top: 2px;
+    font-family: -apple-system, sans-serif;
+  }
+
+  /* ── UPCOMING LIST ── */
+  .booking-row {
+    border-radius: 10px;
+    padding: 13px 16px;
+    background: #f8f8f6;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .booking-row:last-child { margin-bottom: 0; }
+  .booking-name {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--ink);
+  }
+  .booking-meta {
+    font-family: -apple-system, sans-serif;
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+  .booking-notes {
+    font-family: -apple-system, sans-serif;
+    font-size: 12px;
+    color: var(--light-muted);
+    font-style: italic;
+    margin-top: 2px;
+  }
+  .booking-actions { display: flex; gap: 6px; flex-shrink: 0; }
+  .empty-state {
+    font-family: -apple-system, sans-serif;
+    font-size: 14px;
+    color: var(--light-muted);
+    font-style: italic;
+    padding: 20px 0;
+    text-align: center;
+  }
+
+  /* ── BUTTONS ── */
+  .btn {
+    font-family: -apple-system, sans-serif;
+    font-weight: 700;
+    border: none;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: opacity 0.15s, transform 0.1s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn-primary {
+    padding: 11px 20px;
+    font-size: 14px;
+    color: #fff;
+  }
+  .btn-ghost {
+    padding: 7px 13px;
+    font-size: 12px;
+    background: transparent;
+    border: 2px solid var(--border);
+    color: var(--muted);
+  }
+  .btn-ghost:hover { border-color: #aaa; }
+  .btn-danger {
+    padding: 7px 13px;
+    font-size: 12px;
+    background: transparent;
+    border: 2px solid #e0b0ac;
+    color: var(--danger);
+  }
+  .btn-danger:hover { background: var(--danger-light); }
+  .btn-copy {
+    padding: 9px 16px;
+    font-size: 13px;
+    color: #fff;
+    white-space: nowrap;
+  }
+
+  /* ── MODAL ── */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.48);
+    z-index: 1000;
+    justify-content: center;
+    padding: 16px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .modal-overlay.open { display: block; }
+  .modal-overlay.open > .modal-box {
+    margin: 0 auto;
+  }
+  .modal-box {
+    background: #fff;
+    border-radius: 16px;
+    padding: 26px 24px;
+    max-width: 460px;
+    width: 100%;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+  }
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 18px;
+  }
+  .modal-title { font-size: 19px; font-weight: 700; color: var(--ink); }
+  .modal-close {
+    background: none; border: none; font-size: 22px;
+    cursor: pointer; color: #bbb; padding: 0 0 0 12px; line-height: 1;
+  }
+  .modal-close:hover { color: #777; }
+
+  /* ── FORM ── */
+  .form-label {
+    display: block;
+    font-family: -apple-system, sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--muted);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 5px;
+    margin-top: 14px;
+  }
+  .form-label:first-of-type { margin-top: 0; }
+  .form-input {
+    width: 100%;
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    padding: 9px 12px;
+    font-size: 15px;
+    font-family: inherit;
+    color: var(--ink);
+    outline: none;
+    transition: border-color 0.15s;
+    background: #fff;
+  }
+  .form-input:focus { border-color: var(--accent, #4A8B8C); }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .form-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 22px; }
+  .form-error {
+    font-family: -apple-system, sans-serif;
+    font-size: 13px;
+    color: var(--danger);
+    background: var(--danger-light);
+    border-radius: 6px;
+    padding: 8px 12px;
+    margin-bottom: 14px;
+  }
+
+  /* ── BOOKING DETAIL ── */
+  .detail-booking {
+    border-radius: 10px;
+    padding: 13px 16px;
+    background: #f8f8f6;
+    margin-bottom: 10px;
+  }
+  .detail-booking:last-of-type { margin-bottom: 0; }
+
+  /* ── TOAST ── */
+  #toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: #1a2a2a;
+    color: #fff;
+    font-family: -apple-system, sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 12px 22px;
+    border-radius: 24px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+    transition: transform 0.3s ease;
+    z-index: 2000;
+    white-space: nowrap;
+  }
+  #toast.show { transform: translateX(-50%) translateY(0); }
+
+  /* ── ADMIN LOCK ── */
+  #admin-lock-btn {
+    position: absolute;
+    top: 18px;
+    right: 16px;
+    background: rgba(255,255,255,0.35);
+    border: none;
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s;
+  }
+  #admin-lock-btn:hover { background: rgba(255,255,255,0.55); }
+
+  /* ── PASSCODE MODAL ── */
+  #passcode-dots {
+    display: flex;
+    gap: 14px;
+    justify-content: center;
+    margin: 22px 0 10px;
+  }
+  .passcode-dot {
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    border: 2px solid #ccc;
+    background: transparent;
+    transition: all 0.15s;
+  }
+  .passcode-dot.filled { border-color: var(--accent); background: var(--accent); }
+  #passcode-keypad {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-top: 16px;
+  }
+  .passcode-key {
+    font-family: -apple-system, sans-serif;
+    font-size: 20px;
+    font-weight: 600;
+    padding: 14px;
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    background: #fafafa;
+    cursor: pointer;
+    transition: background 0.1s, transform 0.1s;
+    color: var(--ink);
+  }
+  .passcode-key:active { background: var(--accent-light); transform: scale(0.95); }
+  .passcode-key.wide { grid-column: span 2; }
+  #passcode-error {
+    font-family: -apple-system, sans-serif;
+    font-size: 13px;
+    color: var(--danger);
+    text-align: center;
+    min-height: 18px;
+    margin-top: 8px;
+  }
+
+  /* ── TIMELINE VIEW ── */
+  .tl-month-section { margin-bottom: 36px; }
+  .tl-month-section:last-child { margin-bottom: 0; }
+  .tl-month-heading {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--light-muted);
+    margin-bottom: 14px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-family: -apple-system, sans-serif;
+  }
+  .tl-track {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 6px;
+  }
+  .tl-name {
+    font-family: -apple-system, sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--muted);
+    width: 80px;
+    flex-shrink: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: right;
+  }
+  .tl-rail {
+    flex: 1;
+    height: 32px;
+    background: #f0f0ec;
+    border-radius: 8px;
+    position: relative;
+    overflow: hidden;
+  }
+  .tl-bar {
+    position: absolute;
+    top: 5px;
+    height: 22px;
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 4px;
+  }
+  .tl-bar-label {
+    font-family: -apple-system, sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    color: rgba(255,255,255,0.95);
+    white-space: nowrap;
+    padding: 0 6px;
+  }
+  /* Tick marks overlay on the rail */
+  .tl-rail-ticks {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+  .tl-tick {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: rgba(0,0,0,0.08);
+  }
+  .tl-tick-label {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    font-family: -apple-system, sans-serif;
+    font-size: 9px;
+    color: rgba(0,0,0,0.25);
+    font-weight: 600;
+    pointer-events: none;
+  }
+  /* Name row aligner spacer */
+  .tl-axis-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+  .tl-axis-spacer { width: 80px; flex-shrink: 0; }
+  .tl-axis-rail {
+    flex: 1;
+    position: relative;
+    height: 16px;
+  }
+  .tl-axis-label {
+    position: absolute;
+    font-family: -apple-system, sans-serif;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--light-muted);
+    transform: translateX(-50%);
+    top: 0;
+  }
+  .tl-axis-label:last-child { transform: translateX(-100%); }
+  .tl-house-label {
+    font-family: -apple-system, sans-serif;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 5px 10px;
+    border-radius: 20px;
+    color: #fff;
+    display: inline-block;
+    margin-bottom: 14px;
+  }
+  .both-house-section {
+    margin-bottom: 32px;
+    padding-bottom: 28px;
+    border-bottom: 2px solid var(--border);
+  }
+  .both-house-section:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+  .tl-empty {
+    font-family: -apple-system, sans-serif;
+    font-size: 13px;
+    color: var(--light-muted);
+    font-style: italic;
+    text-align: center;
+    padding: 20px 0;
+  }
+
+  @media (max-width: 480px) {
+    .cal-cell { min-height: 46px; padding: 4px 3px; }
+    .cal-chip { font-size: 9px; padding: 1px 3px; }
+    .form-row { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div id="header-band" style="position:relative;">
+  <button id="admin-lock-btn" onclick="openPasscode()" title="Admin login">🔒</button>
+  <div style="max-width:860px;margin:0 auto;">
+    <div class="house-switcher">
+      <button class="house-tab active" onclick="switchHouse('port')" id="tab-port">Port Royal</button>
+      <button class="house-tab inactive" onclick="switchHouse('royal')" id="tab-royal">Royal Crest</button>
+    </div>
+    <div id="header-eyebrow">Hilton Head Island</div>
+    <div id="header-title">5 Royal Crest Drive</div>
+    <div id="header-sub">View-only · Contact the host to book your stay</div>
+  </div>
+</div>
+
+<!-- CONTENT -->
+<div class="content">
+
+  <!-- Spacer so floating bar doesn't cover bottom content -->
+  <div class="admin-spacer" id="admin-spacer"></div>
+
+  <!-- View tabs -->
+  <div class="view-tabs">
+    <button class="view-tab active" id="tab-calendar" onclick="switchView('calendar')">Calendar</button>
+    <button class="view-tab" id="tab-upcoming" onclick="switchView('upcoming')">Upcoming</button>
+    <button class="view-tab" id="tab-both" onclick="switchView('both')">Both</button>
+  </div>
+
+  <!-- Main card -->
+  <div class="card">
+    <div id="view-calendar">
+      <div style="display:flex;gap:6px;margin-bottom:16px;">
+        <button id="cal-tab-grid" onclick="setCalTab('grid')" style="font-family:-apple-system,sans-serif;font-size:12px;font-weight:700;padding:5px 14px;border-radius:20px;border:2px solid var(--accent);background:var(--accent);color:#fff;cursor:pointer;">📅 Calendar</button>
+        <button id="cal-tab-timeline" onclick="setCalTab('timeline')" style="font-family:-apple-system,sans-serif;font-size:12px;font-weight:700;padding:5px 14px;border-radius:20px;border:2px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;">Timeline</button>
+      </div>
+      <div id="cal-grid-content">
+        <div class="cal-nav">
+          <button class="cal-nav-btn" onclick="changeMonth(-1)">‹</button>
+          <div class="cal-month-label" id="cal-month-label">June 2026</div>
+          <button class="cal-nav-btn" onclick="changeMonth(1)">›</button>
+        </div>
+        <div class="cal-grid" id="cal-grid"></div>
+      </div>
+      <div id="cal-timeline-content" style="display:none;"></div>
+    </div>
+    <div id="view-upcoming" style="display:none;"><div id="upcoming-list"></div></div>
+    <div id="view-timeline" style="display:none;"><div id="timeline-content"></div></div>
+    <div id="view-both" style="display:none;">
+      <div style="display:flex;gap:6px;margin-bottom:16px;">
+        <button id="both-tab-people" onclick="setBothTab('people')" style="font-family:-apple-system,sans-serif;font-size:12px;font-weight:700;padding:5px 14px;border-radius:20px;border:2px solid var(--accent);background:var(--accent);color:#fff;cursor:pointer;">👥 People</button>
+        <button id="both-tab-timeline" onclick="setBothTab('timeline')" style="font-family:-apple-system,sans-serif;font-size:12px;font-weight:700;padding:5px 14px;border-radius:20px;border:2px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;">Timeline</button>
+      </div>
+      <div id="both-people-content"></div>
+      <div id="both-content" style="display:none;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm delete modal -->
+<div class="modal-overlay" id="modal-confirm">
+  <div class="modal-box" style="max-width:340px;text-align:center;">
+    <div style="font-size:36px;margin-bottom:12px;">🗑️</div>
+    <div class="modal-title" style="margin-bottom:8px;">Remove Reservation?</div>
+    <p id="confirm-msg" style="font-family:-apple-system,sans-serif;font-size:14px;color:var(--muted);margin-bottom:24px;line-height:1.5;"></p>
+    <div style="display:flex;gap:10px;">
+      <button class="btn btn-ghost" onclick="closeModal('modal-confirm')" style="flex:1;justify-content:center;padding:12px;">Cancel</button>
+      <button class="btn" id="confirm-delete-btn" onclick="confirmDelete()" style="flex:1;justify-content:center;padding:12px;background:var(--danger);color:#fff;border-radius:8px;font-size:14px;font-weight:700;">Remove</button>
+    </div>
+  </div>
+</div>
+
+<!-- FLOATING ADMIN BAR -->
+<div class="admin-bar" id="admin-bar">
+  <button class="btn btn-primary" id="add-btn" onclick="openAddForm(null)" style="background:var(--accent)">
+    + Add Reservation
+  </button>
+  <button id="share-btn" onclick="copyShareLink()">
+    <span id="share-btn-icon">🔗</span>
+    <span id="share-btn-label">Share</span>
+  </button>
+</div>
+
+<!-- ── MODALS ── -->
+
+<!-- Day detail modal -->
+<div class="modal-overlay" id="modal-day">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title" id="day-modal-title">June 28, 2026</div>
+      <button class="modal-close" onclick="closeModal('modal-day')">×</button>
+    </div>
+    <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;">
+      <button id="day-tab-reservations" onclick="setDayTab('reservations')" style="font-family:-apple-system,sans-serif;font-size:12px;font-weight:700;padding:5px 14px;border-radius:20px;border:2px solid var(--accent);background:var(--accent);color:#fff;cursor:pointer;">Reservations</button>
+      <button id="day-tab-people" onclick="setDayTab('people')" style="font-family:-apple-system,sans-serif;font-size:12px;font-weight:700;padding:5px 14px;border-radius:20px;border:2px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;">👥 People</button>
+      <button id="day-tab-events" onclick="setDayTab('events')" style="font-family:-apple-system,sans-serif;font-size:12px;font-weight:700;padding:5px 14px;border-radius:20px;border:2px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;">🎉 Events</button>
+    </div>
+    <div id="day-modal-body"></div>
+    <div id="day-modal-people" style="display:none;"></div>
+    <div id="day-modal-events" style="display:none;"></div>
+    <button class="btn btn-primary" id="day-add-btn" onclick="addFromDay()" style="width:100%;justify-content:center;margin-top:14px;display:none;">+ Add Reservation for This Day</button>
+    <button class="btn btn-ghost" id="day-add-event-btn" onclick="openEventForm(dayForAdd)" style="width:100%;justify-content:center;margin-top:10px;display:none;">🎉 Add Event</button>
+  </div>
+</div>
+
+<!-- Event form modal -->
+<div class="modal-overlay" id="modal-event">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title" id="event-form-title">Add Event</div>
+      <button class="modal-close" onclick="closeModal('modal-event')">×</button>
+    </div>
+    <label class="form-label">Event Name</label>
+    <input class="form-input" id="ev-name" type="text" placeholder="e.g. Neon Party, Jon's 50th">
+    <label class="form-label">Date</label>
+    <input class="form-input" id="ev-date" type="date">
+    <label class="form-label" style="margin-top:14px;">Emoji / Icon (optional)</label>
+    <input class="form-input" id="ev-emoji" type="text" placeholder="🎉" maxlength="4" style="width:80px;">
+    <label class="form-label" style="margin-top:14px;">Visibility</label>
+    <div style="display:flex;gap:8px;margin-top:4px;">
+      <button id="ev-public-btn" onclick="setEventVisibility('public')"
+        style="flex:1;font-family:-apple-system,sans-serif;font-size:13px;font-weight:700;padding:10px;border-radius:8px;border:2px solid var(--accent);background:var(--accent);color:#fff;cursor:pointer;">🌐 Public</button>
+      <button id="ev-private-btn" onclick="setEventVisibility('private')"
+        style="flex:1;font-family:-apple-system,sans-serif;font-size:13px;font-weight:700;padding:10px;border-radius:8px;border:2px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;">🔒 Private</button>
+    </div>
+    <p id="ev-visibility-hint" style="font-family:-apple-system,sans-serif;font-size:12px;color:var(--light-muted);margin-top:6px;">Visible to everyone with the link.</p>
+    <div id="ev-error" class="form-error" style="display:none;margin-top:12px;"></div>
+    <div class="form-actions" style="margin-top:18px;">
+      <button class="btn btn-ghost" onclick="closeModal('modal-event')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEvent()" style="background:var(--accent)" id="ev-save-btn">Add Event</button>
+    </div>
+  </div>
+</div>
+
+<!-- Booking form modal -->
+<div class="modal-overlay" id="modal-form">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title" id="form-title">Add Reservation</div>
+      <button class="modal-close" onclick="closeModal('modal-form')">×</button>
+    </div>
+    <div id="form-error" class="form-error" style="display:none;"></div>
+    <div id="form-overlap-warning" style="display:none;background:#fff8e6;border:2px solid #f0c040;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-family:-apple-system,sans-serif;font-size:13px;color:#7a5c00;"></div>
+    <label class="form-label">Group / Family Name</label>
+    <input class="form-input" id="f-name" type="text" placeholder="e.g. The Jarretts">
+    <label class="form-label">Number of Guests</label>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:2px;">
+      <input type="range" id="f-guests" min="1" max="20" value="2"
+        oninput="document.getElementById('f-guests-display').textContent=this.value;"
+        style="flex:1;accent-color:var(--accent);height:6px;cursor:pointer;">
+      <span id="f-guests-display" style="font-family:-apple-system,sans-serif;font-size:18px;font-weight:800;color:var(--accent);min-width:28px;text-align:right;">2</span>
+    </div>
+    <div class="form-row" style="margin-top:14px;">
+      <div>
+        <label class="form-label" style="margin-top:0;">Check-in</label>
+        <input class="form-input" id="f-start" type="date" onchange="onStartDateChange()">
+      </div>
+      <div>
+        <label class="form-label" style="margin-top:0;">Check-out</label>
+        <input class="form-input" id="f-end" type="date">
+      </div>
+    </div>
+    <label class="form-label">Notes (optional)</label>
+    <textarea class="form-input" id="f-notes" rows="2" placeholder="Anything to know about this visit…" style="resize:vertical;"></textarea>
+    <div id="f-move-row" style="display:none;margin-top:14px;flex-direction:column;gap:8px;">
+      <button class="btn btn-ghost" id="f-names-btn" onclick="closeModal('modal-form');openNamesModal()" style="width:100%;justify-content:center;padding:11px;">👥 Add / Edit Guest Names</button>
+      <button class="btn btn-ghost" id="f-move-btn" onclick="moveToOtherHouse()" style="width:100%;justify-content:center;padding:11px;"></button>
+    </div>
+    <div class="form-actions" style="padding-top:14px;border-top:1px solid var(--border);flex-shrink:0;margin-top:14px;">
+      <button class="btn btn-ghost" onclick="closeModal('modal-form')">Cancel</button>
+      <button class="btn btn-primary" id="form-save-btn" onclick="saveBooking()" style="background:var(--accent)">Add Reservation</button>
+    </div>
+  </div>
+</div>
+
+<!-- Guest names modal -->
+<div class="modal-overlay" id="modal-names">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="names-modal-title">Who's coming?</div>
+        <div id="names-modal-sub" style="font-family:-apple-system,sans-serif;font-size:13px;color:var(--muted);margin-top:3px;"></div>
+      </div>
+      <button class="modal-close" onclick="closeModal('modal-names')">×</button>
+    </div>
+    <p style="font-family:-apple-system,sans-serif;font-size:13px;color:var(--light-muted);margin-bottom:14px;">All names are optional — fill in as many as you like.</p>
+    <div id="names-fields" style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px;"></div>
+    <button onclick="saveGuestNames()" style="display:block;width:100%;padding:13px;border-radius:8px;border:none;background:var(--accent);font-family:-apple-system,sans-serif;font-size:15px;font-weight:700;color:#fff;cursor:pointer;margin-bottom:10px;">Save Names</button>
+    <button onclick="skipGuestNames()" style="display:block;width:100%;padding:11px;border-radius:8px;border:2px solid #e2e2dc;background:transparent;font-family:-apple-system,sans-serif;font-size:14px;font-weight:700;color:#556677;cursor:pointer;">Skip</button>
+  </div>
+</div>
+
+<!-- Passcode modal -->
+<div class="modal-overlay" id="modal-passcode">
+  <div class="modal-box" style="max-width:320px;text-align:center;">
+    <div class="modal-header" style="justify-content:center;position:relative;">
+      <div class="modal-title" id="passcode-title">Admin Access</div>
+      <button class="modal-close" style="position:absolute;right:0;top:0;" onclick="closeModal('modal-passcode')">×</button>
+    </div>
+    <p style="font-family:-apple-system,sans-serif;font-size:13px;color:var(--muted);">Enter the 4-digit passcode to manage reservations.</p>
+    <div id="passcode-dots">
+      <div class="passcode-dot" id="dot-0"></div>
+      <div class="passcode-dot" id="dot-1"></div>
+      <div class="passcode-dot" id="dot-2"></div>
+      <div class="passcode-dot" id="dot-3"></div>
+    </div>
+    <div id="passcode-error"></div>
+    <div id="passcode-keypad">
+      <button class="passcode-key" onclick="pcKey('1')">1</button>
+      <button class="passcode-key" onclick="pcKey('2')">2</button>
+      <button class="passcode-key" onclick="pcKey('3')">3</button>
+      <button class="passcode-key" onclick="pcKey('4')">4</button>
+      <button class="passcode-key" onclick="pcKey('5')">5</button>
+      <button class="passcode-key" onclick="pcKey('6')">6</button>
+      <button class="passcode-key" onclick="pcKey('7')">7</button>
+      <button class="passcode-key" onclick="pcKey('8')">8</button>
+      <button class="passcode-key" onclick="pcKey('9')">9</button>
+      <button class="passcode-key" onclick="pcBack()">⌫</button>
+      <button class="passcode-key" onclick="pcKey('0')">0</button>
+      <button class="passcode-key" onclick="pcClear()">✕</button>
+    </div>
+    <div id="passcode-signout-row" style="margin-top:18px;display:none;">
+      <button class="btn btn-danger" style="width:100%;justify-content:center;padding:10px;" onclick="signOutAdmin()">Sign out of admin</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script>
+// ── CONFIG ──────────────────────────────────────────────────────────────────
+
+const HOUSES = {
+  royal: {
+    key: 'royal',
+    name: '5 Royal Crest Drive',
+    short: 'Royal Crest',
+    accent: '#C8A96E',
+    accentDark: '#8B6914',
+    accentLight: '#F5EDDB',
+    band: 'linear-gradient(135deg, #C8A96E 0%, #E8D5A3 55%, #F5EDDB 100%)',
+    storageKey: 'bookings_royal',
+  },
+  port: {
+    key: 'port',
+    name: '95 S Port Royal Drive',
+    short: 'Port Royal',
+    accent: '#4A8B8C',
+    accentDark: '#2C5F60',
+    accentLight: '#D6ECEC',
+    band: 'linear-gradient(135deg, #4A8B8C 0%, #7AB8B9 55%, #D6ECEC 100%)',
+    storageKey: 'bookings_port',
+  },
+};
+
+const GUEST_COLORS = ['#D4756B','#5B94BC','#6BAD6B','#9B72B8','#C4A04A','#52A8A0','#BE6283','#82A84A'];
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const DAYS_SHORT = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+// ── STATE ────────────────────────────────────────────────────────────────────
+
+const params = new URLSearchParams(location.search);
+let currentHouse = HOUSES[params.get('house')] ? params.get('house') : 'port';
+let isAdmin = params.get('admin') === 'true';
+let bookings = [];
+let calYear, calMonth;
+let editingId = null;
+let dayForAdd = null;
+let currentView = 'calendar';
+
+const today = new Date();
+calYear = today.getFullYear();
+calMonth = today.getMonth();
+
+const EVENTS_STORAGE_KEY = 'beach_events'; // shared across both houses
+let events = [];
+let editingEventId = null;
+let currentEventVisibility = 'public';
+
+function loadEvents() {
+  try {
+    const raw = localStorage.getItem(EVENTS_STORAGE_KEY);
+    events = raw ? JSON.parse(raw) : [];
+  } catch { events = []; }
+}
+
+function saveEvents() {
+  try { localStorage.setItem(EVENTS_STORAGE_KEY, JSON.stringify(events)); }
+  catch(e) { console.error('Save events failed', e); }
+}
+
+function eventsForDate(ymd) {
+  return events.filter(e => e.date === ymd && (isAdmin || e.visibility === 'public'));
+}
+
+// ── STORAGE ──────────────────────────────────────────────────────────────────
+
+function storageKey() { return HOUSES[currentHouse].storageKey; }
+
+function loadBookings() {
+  try {
+    const raw = localStorage.getItem(storageKey());
+    bookings = raw ? JSON.parse(raw) : [];
+  } catch { bookings = []; }
+}
+
+function saveBookings() {
+  try { localStorage.setItem(storageKey(), JSON.stringify(bookings)); }
+  catch(e) { console.error('Save failed', e); }
+}
+
+// ── DATE UTILS ───────────────────────────────────────────────────────────────
+
+function toYMD(d) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function parseYMD(s) { const [y,m,d] = s.split('-').map(Number); return new Date(y,m-1,d); }
+function todayYMD() { return toYMD(new Date()); }
+
+function datesInRange(start, end) {
+  const dates = [], cur = new Date(parseYMD(start)), last = parseYMD(end);
+  while (cur <= last) { dates.push(toYMD(cur)); cur.setDate(cur.getDate()+1); }
+  return dates;
+}
+
+function bookingsForDate(ymd) {
+  return bookings.filter(b => datesInRange(b.start, b.end).includes(ymd));
+}
+
+function nightCount(start, end) { return datesInRange(start, end).length - 1; }
+
+function formatRange(start, end) {
+  const s = parseYMD(start), e = parseYMD(end);
+  const opts = { month:'short', day:'numeric' };
+  if (s.getFullYear() !== e.getFullYear())
+    return `${s.toLocaleDateString('en-US',{...opts,year:'numeric'})} – ${e.toLocaleDateString('en-US',{...opts,year:'numeric'})}`;
+  return `${s.toLocaleDateString('en-US',opts)} – ${e.toLocaleDateString('en-US',{...opts,year:'numeric'})}`;
+}
+
+// ── COLORS ───────────────────────────────────────────────────────────────────
+
+function guestColor(name) {
+  const names = [...new Set(bookings.map(b => b.name))];
+  const i = names.indexOf(name);
+  return GUEST_COLORS[(i < 0 ? names.length : i) % GUEST_COLORS.length];
+}
+
+// ── HOUSE ────────────────────────────────────────────────────────────────────
+
+function house() { return HOUSES[currentHouse]; }
+
+function applyHouseTheme() {
+  const h = house();
+  document.documentElement.style.setProperty('--accent', h.accent);
+  document.documentElement.style.setProperty('--accent-dark', h.accentDark);
+  document.documentElement.style.setProperty('--accent-light', h.accentLight);
+  document.getElementById('header-band').style.background = h.band;
+  document.getElementById('header-title').textContent = h.name;
+  document.getElementById('header-sub').textContent = isAdmin
+    ? 'Admin · You can add and edit reservations'
+    : 'View-only · Contact the host to book your stay';
+
+  // Tabs
+  ['royal','port'].forEach(k => {
+    const t = document.getElementById('tab-'+k);
+    t.className = 'house-tab ' + (k === currentHouse ? 'active' : 'inactive');
+  });
+
+  // Admin bar
+  const adminBar = document.getElementById('admin-bar');
+  const adminSpacer = document.getElementById('admin-spacer');
+  if (isAdmin) {
+    adminBar.classList.add('visible');
+    adminSpacer.classList.add('visible');
+    document.getElementById('add-btn').style.background = h.accent;
+    const shareBtn = document.getElementById('share-btn');
+    shareBtn.style.borderColor = h.accent;
+    shareBtn.style.color = h.accent;
+    shareBtn.style.background = 'transparent';
+    document.getElementById('day-add-btn').style.background = h.accent;
+  } else {
+    adminBar.classList.remove('visible');
+    adminSpacer.classList.remove('visible');
+  }
+
+  // View tabs active color — defer until updateTabStyles is defined
+  setTimeout(() => updateTabStyles(currentView), 0);
+}
+
+function switchHouse(key) {
+  currentHouse = key;
+  loadBookings();
+  applyHouseTheme();
+  renderAll();
+}
+
+// ── VIEW ─────────────────────────────────────────────────────────────────────
+
+const VIEW_ORDER = ['calendar','upcoming','both'];
+
+function switchView(v) {
+  currentView = v;
+  VIEW_ORDER.forEach(name => {
+    document.getElementById('view-' + name).style.display = name === v ? '' : 'none';
+  });
+  updateTabStyles(v);
+  renderAll();
+}
+
+function updateTabStyles(v) {
+  VIEW_ORDER.forEach(name => {
+    const t = document.getElementById('tab-' + name);
+    if (!t) return;
+    const active = name === v;
+    t.className = 'view-tab' + (active ? ' active' : '');
+    t.style.background  = active ? house().accent : '';
+    t.style.color       = active ? '#fff' : '';
+    t.style.borderColor = active ? 'transparent' : '';
+  });
+  const activeTab = document.getElementById('tab-' + v);
+  if (activeTab) activeTab.scrollIntoView({ inline: 'nearest', behavior: 'smooth' });
+}
+
+// ── CALENDAR SUB-TABS ─────────────────────────────────────────────────────────
+
+function setCalTab(tab) {
+  const gridBtn = document.getElementById('cal-tab-grid');
+  const tlBtn   = document.getElementById('cal-tab-timeline');
+  const gridDiv = document.getElementById('cal-grid-content');
+  const tlDiv   = document.getElementById('cal-timeline-content');
+  const accent  = house().accent;
+  const activeStyle   = `font-family:-apple-system,sans-serif;font-size:12px;font-weight:700;padding:5px 14px;border-radius:20px;border:2px solid ${accent};background:${accent};color:#fff;cursor:pointer;`;
+  const inactiveStyle = `font-family:-apple-system,sans-serif;font-size:12px;font-weight:700;padding:5px 14px;border-radius:20px;border:2px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;`;
+  if (tab === 'grid') {
+    gridBtn.style.cssText = activeStyle; tlBtn.style.cssText = inactiveStyle;
+    gridDiv.style.display = ''; tlDiv.style.display = 'none';
+  } else {
+    gridBtn.style.cssText = inactiveStyle; tlBtn.style.cssText = activeStyle;
+    gridDiv.style.display = 'none'; tlDiv.style.display = '';
+    renderCalTimeline();
+  }
+}
+
+function renderCalTimeline() {
+  const container = document.getElementById('cal-timeline-content');
+  container.innerHTML = '';
+  const tYMD = todayYMD();
+  const upcoming = bookings.filter(b => b.end >= tYMD);
+  if (upcoming.length === 0) { container.innerHTML = '<div class="tl-empty">No upcoming reservations.</div>'; return; }
+  const now = new Date();
+  let endDate = new Date(now);
+  upcoming.forEach(b => { const e = parseYMD(b.end); if (e > endDate) endDate = e; });
+  let cur = new Date(now.getFullYear(), now.getMonth(), 1);
+  const lastMonth = new Date(endDate.getFullYear(), endDate.getMonth(), 1);
+  while (cur <= lastMonth) {
+    const y = cur.getFullYear(), m = cur.getMonth();
+    const daysInMonth = new Date(y, m + 1, 0).getDate();
+    const monthStart = toYMD(new Date(y, m, 1)), monthEnd = toYMD(new Date(y, m, daysInMonth));
+    const monthBookings = upcoming.filter(b => b.start <= monthEnd && b.end >= monthStart);
+    if (monthBookings.length === 0) { cur = new Date(y, m + 1, 1); continue; }
+    const section = document.createElement('div');
+    section.className = 'tl-month-section';
+    const heading = document.createElement('div');
+    heading.className = 'tl-month-heading';
+    heading.textContent = `${MONTHS[m]} ${y}`;
+    section.appendChild(heading);
+    const tickDays = [1, Math.round(daysInMonth*.25), Math.round(daysInMonth*.5), Math.round(daysInMonth*.75), daysInMonth];
+    const axisRow = document.createElement('div'); axisRow.className = 'tl-axis-row';
+    const spacer = document.createElement('div'); spacer.className = 'tl-axis-spacer'; axisRow.appendChild(spacer);
+    const axisRail = document.createElement('div'); axisRail.className = 'tl-axis-rail';
+    tickDays.forEach((d, i) => {
+      const lbl = document.createElement('div'); lbl.className = 'tl-axis-label';
+      lbl.style.left = ((d-1)/(daysInMonth-1)*100)+'%';
+      if (i===tickDays.length-1) lbl.style.transform='translateX(-100%)';
+      lbl.textContent = d; axisRail.appendChild(lbl);
+    });
+    axisRow.appendChild(axisRail); section.appendChild(axisRow);
+    monthBookings.sort((a,b)=>a.start.localeCompare(b.start)).forEach(b => {
+      const color = guestColor(b.name);
+      const barStart = b.start<monthStart?monthStart:b.start, barEnd = b.end>monthEnd?monthEnd:b.end;
+      const startDay = parseYMD(barStart).getDate(), endDay = parseYMD(barEnd).getDate();
+      const leftPct = ((startDay-1)/daysInMonth)*100;
+      const widthPct = Math.max(((endDay/daysInMonth)*100)-leftPct, 1.5);
+      const individuals = Array.isArray(b.individuals)?b.individuals.filter(Boolean):[];
+      const hasNames = individuals.length>0;
+      const wrapper = document.createElement('div'); wrapper.style.marginBottom='6px';
+      const track = document.createElement('div'); track.className='tl-track'; track.style.marginBottom='0';
+      const name = document.createElement('div'); name.className='tl-name';
+      name.style.cursor = hasNames?'pointer':'default';
+      name.innerHTML = hasNames?`${escHtml(b.name)} <span style="font-size:9px;opacity:0.6;">▼</span>`:escHtml(b.name);
+      const dropdown = document.createElement('div');
+      dropdown.style.cssText = `display:none;margin-left:92px;margin-top:4px;background:#f8f8f6;border-radius:8px;padding:8px 10px;border-left:3px solid ${color};`;
+      if (hasNames) {
+        individuals.forEach(n => {
+          const row = document.createElement('div');
+          row.style.cssText='display:flex;align-items:center;gap:7px;padding:3px 0;font-family:-apple-system,sans-serif;font-size:12px;color:var(--ink);';
+          row.innerHTML=`<span style="width:6px;height:6px;border-radius:50%;background:${color};flex-shrink:0;display:inline-block;"></span>${escHtml(n)}`;
+          dropdown.appendChild(row);
+        });
+        name.onclick=()=>{const open=dropdown.style.display!=='none';dropdown.style.display=open?'none':'block';name.innerHTML=`${escHtml(b.name)} <span style="font-size:9px;opacity:0.6;">${open?'▼':'▲'}</span>`;};
+      }
+      const rail = document.createElement('div'); rail.className='tl-rail';
+      const ticks = document.createElement('div'); ticks.className='tl-rail-ticks';
+      tickDays.slice(1,-1).forEach(d=>{const tick=document.createElement('div');tick.className='tl-tick';tick.style.left=((d-1)/(daysInMonth-1)*100)+'%';ticks.appendChild(tick);});
+      rail.appendChild(ticks);
+      const bar=document.createElement('div'); bar.className='tl-bar';
+      bar.style.left=leftPct+'%'; bar.style.width=widthPct+'%'; bar.style.background=color;
+      if(widthPct>12){const bl=document.createElement('div');bl.className='tl-bar-label';bl.textContent=`${startDay}–${endDay}`;bar.appendChild(bl);}
+      rail.appendChild(bar); track.appendChild(name); track.appendChild(rail);
+      wrapper.appendChild(track); wrapper.appendChild(dropdown); section.appendChild(wrapper);
+    });
+    container.appendChild(section);
+    cur = new Date(y, m+1, 1);
+  }
+}
+
+// ── CALENDAR RENDER ──────────────────────────────────────────────────────────
+
+function renderCalendar() {
+  document.getElementById('cal-month-label').textContent = `${MONTHS[calMonth]} ${calYear}`;
+  const grid = document.getElementById('cal-grid');
+  grid.innerHTML = '';
+
+  // Headers
+  DAYS_SHORT.forEach(d => {
+    const el = document.createElement('div');
+    el.className = 'cal-day-header';
+    el.textContent = d;
+    grid.appendChild(el);
+  });
+
+  const firstDay = new Date(calYear, calMonth, 1).getDay();
+  const daysInMonth = new Date(calYear, calMonth+1, 0).getDate();
+  const tYMD = todayYMD();
+
+  for (let i = 0; i < firstDay; i++) {
+    grid.appendChild(document.createElement('div'));
+  }
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const ymd = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const dayB = bookingsForDate(ymd);
+    const isToday = ymd === tYMD;
+
+    const dayEvts = eventsForDate(ymd);
+    const cell = document.createElement('div');
+    cell.className = 'cal-cell' + (isToday ? ' today' : '') + (dayB.length > 0 ? ' has-bookings' : '');
+    cell.onclick = () => openDayDetail(ymd);
+
+    const dayNum = document.createElement('div');
+    dayNum.className = 'cal-cell-day';
+    dayNum.textContent = d;
+    if (isToday) dayNum.style.color = house().accentDark;
+
+    // Event dot indicator in top-right if events exist
+    if (dayEvts.length > 0) {
+      dayNum.style.display = 'flex';
+      dayNum.style.justifyContent = 'space-between';
+      dayNum.style.alignItems = 'center';
+      const dot = document.createElement('span');
+      dot.textContent = dayEvts[0].emoji || '🎉';
+      dot.style.fontSize = '9px';
+      dayNum.appendChild(dot);
+    }
+    cell.appendChild(dayNum);
+
+    dayB.slice(0,2).forEach(b => {
+      const chip = document.createElement('div');
+      chip.className = 'cal-chip';
+      chip.style.background = guestColor(b.name);
+      chip.textContent = b.name;
+      cell.appendChild(chip);
+    });
+
+    if (dayB.length > 2) {
+      const more = document.createElement('div');
+      more.className = 'cal-more';
+      more.style.color = house().accentDark;
+      more.textContent = `+${dayB.length-2} more`;
+      cell.appendChild(more);
+    }
+
+    grid.appendChild(cell);
+  }
+}
+
+function changeMonth(dir) {
+  calMonth += dir;
+  if (calMonth < 0) { calMonth = 11; calYear--; }
+  if (calMonth > 11) { calMonth = 0; calYear++; }
+  renderCalendar();
+}
+
+// ── UPCOMING RENDER ──────────────────────────────────────────────────────────
+
+function renderUpcoming() {
+  const tYMD = todayYMD();
+  const upcoming = bookings
+    .filter(b => b.end >= tYMD)
+    .sort((a,b) => a.start.localeCompare(b.start));
+
+  const list = document.getElementById('upcoming-list');
+  list.innerHTML = '';
+
+  if (upcoming.length === 0) {
+    list.innerHTML = '<div class="empty-state">No upcoming reservations.</div>';
+    return;
+  }
+
+  // Group by the month of check-in (using start date)
+  const groups = {};
+  upcoming.forEach(b => {
+    const d = parseYMD(b.start);
+    const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    const label = `${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+    if (!groups[key]) groups[key] = { label, bookings: [] };
+    groups[key].bookings.push(b);
+  });
+
+  Object.values(groups).forEach(({ label, bookings: group }) => {
+    // Month heading
+    const heading = document.createElement('div');
+    heading.style.cssText = 'font-family:-apple-system,sans-serif;font-size:11px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:var(--light-muted);margin:18px 0 10px;';
+    heading.textContent = label;
+    list.appendChild(heading);
+
+    group.forEach(b => {
+      const color = guestColor(b.name);
+      const nights = nightCount(b.start, b.end);
+      const row = document.createElement('div');
+      row.className = 'booking-row';
+      row.style.borderLeft = `4px solid ${color}`;
+
+      let actionsHtml = '';
+      if (isAdmin) {
+        actionsHtml = `
+          <div class="booking-actions">
+            <button class="btn btn-ghost" onclick="openEditForm('${b.id}')">Edit</button>
+            <button class="btn btn-danger" onclick="deleteBooking('${b.id}')">✕</button>
+          </div>`;
+      }
+
+      row.innerHTML = `
+        <div style="flex:1;min-width:0;">
+          <div class="booking-name">${escHtml(b.name)}</div>
+          <div class="booking-meta">${formatRange(b.start, b.end)} · ${nights} night${nights!==1?'s':''} · ${b.guests} guest${b.guests!==1?'s':''}</div>
+          ${b.individuals && b.individuals.length > 0 ? `<div class="booking-notes">👥 ${escHtml(Array.isArray(b.individuals) ? b.individuals.join(', ') : b.individuals)}</div>` : ''}
+          ${b.notes ? `<div class="booking-notes">${escHtml(b.notes)}</div>` : ''}
+        </div>
+        ${actionsHtml}`;
+      list.appendChild(row);
+    });
+  });
+}
+
+// ── TIMELINE RENDER ──────────────────────────────────────────────────────────
+
+function renderTimeline() {
+  const container = document.getElementById('timeline-content');
+  container.innerHTML = '';
+
+  const tYMD = todayYMD();
+  const upcoming = bookings.filter(b => b.end >= tYMD);
+
+  if (upcoming.length === 0) {
+    container.innerHTML = '<div class="tl-empty">No upcoming reservations to display.</div>';
+    return;
+  }
+
+  const now = new Date();
+  let endDate = new Date(now);
+  upcoming.forEach(b => { const e = parseYMD(b.end); if (e > endDate) endDate = e; });
+
+  let cur = new Date(now.getFullYear(), now.getMonth(), 1);
+  const lastMonth = new Date(endDate.getFullYear(), endDate.getMonth(), 1);
+
+  while (cur <= lastMonth) {
+    const y = cur.getFullYear();
+    const m = cur.getMonth();
+    const daysInMonth = new Date(y, m + 1, 0).getDate();
+    const monthStart = toYMD(new Date(y, m, 1));
+    const monthEnd   = toYMD(new Date(y, m, daysInMonth));
+
+    const monthBookings = upcoming.filter(b => b.start <= monthEnd && b.end >= monthStart);
+
+    if (monthBookings.length === 0) { cur = new Date(y, m + 1, 1); continue; }
+
+    const section = document.createElement('div');
+    section.className = 'tl-month-section';
+
+    // Heading
+    const heading = document.createElement('div');
+    heading.className = 'tl-month-heading';
+    heading.textContent = `${MONTHS[m]} ${y}`;
+    section.appendChild(heading);
+
+    // Axis labels row
+    const axisRow = document.createElement('div');
+    axisRow.className = 'tl-axis-row';
+    const axisSpacer = document.createElement('div');
+    axisSpacer.className = 'tl-axis-spacer';
+    axisRow.appendChild(axisSpacer);
+    const axisRail = document.createElement('div');
+    axisRail.className = 'tl-axis-rail';
+
+    const tickDays = [1, Math.round(daysInMonth * 0.25), Math.round(daysInMonth * 0.5), Math.round(daysInMonth * 0.75), daysInMonth];
+    tickDays.forEach((d, i) => {
+      const pct = ((d - 1) / (daysInMonth - 1)) * 100;
+      const lbl = document.createElement('div');
+      lbl.className = 'tl-axis-label';
+      lbl.style.left = pct + '%';
+      if (i === tickDays.length - 1) lbl.style.transform = 'translateX(-100%)';
+      lbl.textContent = d;
+      axisRail.appendChild(lbl);
+    });
+    axisRow.appendChild(axisRail);
+    section.appendChild(axisRow);
+
+    // One track per booking
+    monthBookings
+      .sort((a, b) => a.start.localeCompare(b.start))
+      .forEach(b => {
+        const color = guestColor(b.name);
+        const barStart = b.start < monthStart ? monthStart : b.start;
+        const barEnd   = b.end   > monthEnd   ? monthEnd   : b.end;
+        const startDay = parseYMD(barStart).getDate();
+        const endDay   = parseYMD(barEnd).getDate();
+
+        const leftPct  = ((startDay - 1) / daysInMonth) * 100;
+        const rightPct = (endDay / daysInMonth) * 100;
+        const widthPct = Math.max(rightPct - leftPct, 1.5);
+
+        const individuals = Array.isArray(b.individuals) ? b.individuals.filter(Boolean) : [];
+        const hasNames = individuals.length > 0;
+
+        // Wrapper for track + dropdown
+        const wrapper = document.createElement('div');
+        wrapper.style.marginBottom = '6px';
+
+        const track = document.createElement('div');
+        track.className = 'tl-track';
+        track.style.marginBottom = '0';
+
+        // Name button
+        const name = document.createElement('div');
+        name.className = 'tl-name';
+        name.style.cursor = hasNames ? 'pointer' : 'default';
+        name.style.userSelect = 'none';
+        name.title = hasNames ? 'Tap to see names' : b.name;
+        name.innerHTML = hasNames
+          ? `${escHtml(b.name)} <span style="font-size:9px;opacity:0.6;">▼</span>`
+          : escHtml(b.name);
+
+        // Dropdown (hidden by default)
+        const dropdown = document.createElement('div');
+        dropdown.style.cssText = `display:none;margin-left:${80+12}px;margin-top:4px;background:#f8f8f6;border-radius:8px;padding:8px 10px;border-left:3px solid ${color};`;
+
+        if (hasNames) {
+          individuals.forEach(n => {
+            const row = document.createElement('div');
+            row.style.cssText = 'display:flex;align-items:center;gap:7px;padding:3px 0;font-family:-apple-system,sans-serif;font-size:12px;color:var(--ink);';
+            row.innerHTML = `<span style="width:6px;height:6px;border-radius:50%;background:${color};flex-shrink:0;display:inline-block;"></span>${escHtml(n)}`;
+            dropdown.appendChild(row);
+          });
+
+          name.onclick = () => {
+            const open = dropdown.style.display !== 'none';
+            dropdown.style.display = open ? 'none' : 'block';
+            name.innerHTML = hasNames
+              ? `${escHtml(b.name)} <span style="font-size:9px;opacity:0.6;">${open ? '▼' : '▲'}</span>`
+              : escHtml(b.name);
+          };
+        }
+
+        const rail = document.createElement('div');
+        rail.className = 'tl-rail';
+
+        const ticks = document.createElement('div');
+        ticks.className = 'tl-rail-ticks';
+        tickDays.slice(1, -1).forEach(d => {
+          const pct = ((d - 1) / (daysInMonth - 1)) * 100;
+          const tick = document.createElement('div');
+          tick.className = 'tl-tick';
+          tick.style.left = pct + '%';
+          ticks.appendChild(tick);
+        });
+        rail.appendChild(ticks);
+
+        const bar = document.createElement('div');
+        bar.className = 'tl-bar';
+        bar.style.left = leftPct + '%';
+        bar.style.width = widthPct + '%';
+        bar.style.background = color;
+        bar.title = `${b.name}: ${formatRange(b.start, b.end)}`;
+
+        if (widthPct > 12) {
+          const barLabel = document.createElement('div');
+          barLabel.className = 'tl-bar-label';
+          barLabel.textContent = `${startDay}–${endDay}`;
+          bar.appendChild(barLabel);
+        }
+
+        rail.appendChild(bar);
+        track.appendChild(name);
+        track.appendChild(rail);
+        wrapper.appendChild(track);
+        wrapper.appendChild(dropdown);
+        section.appendChild(wrapper);
+      });
+
+    container.appendChild(section);
+    cur = new Date(y, m + 1, 1);
+  }
+}
+
+// ── BOTH HOUSES RENDER ───────────────────────────────────────────────────────
+
+function renderBoth() {
+  const container = document.getElementById('both-content');
+  container.innerHTML = '';
+
+  const tYMD = todayYMD();
+  const now = new Date();
+
+  // Load both houses from localStorage
+  const allBookings = {};
+  Object.values(HOUSES).forEach(h => {
+    try {
+      const raw = localStorage.getItem(h.storageKey);
+      allBookings[h.key] = (raw ? JSON.parse(raw) : []).filter(b => b.end >= tYMD);
+    } catch { allBookings[h.key] = []; }
+  });
+
+  const combined = [...allBookings.port, ...allBookings.royal];
+  if (combined.length === 0) {
+    container.innerHTML = '<div class="tl-empty">No upcoming reservations at either house.</div>';
+    return;
+  }
+
+  // Find overall month range
+  let endDate = new Date(now);
+  combined.forEach(b => { const e = parseYMD(b.end); if (e > endDate) endDate = e; });
+
+  let cur = new Date(now.getFullYear(), now.getMonth(), 1);
+  const lastMonth = new Date(endDate.getFullYear(), endDate.getMonth(), 1);
+
+  while (cur <= lastMonth) {
+    const y = cur.getFullYear();
+    const m = cur.getMonth();
+    const daysInMonth = new Date(y, m + 1, 0).getDate();
+    const monthStart = toYMD(new Date(y, m, 1));
+    const monthEnd   = toYMD(new Date(y, m, daysInMonth));
+
+    const portMonth  = allBookings.port.filter(b => b.start <= monthEnd && b.end >= monthStart);
+    const royalMonth = allBookings.royal.filter(b => b.start <= monthEnd && b.end >= monthStart);
+
+    if (portMonth.length === 0 && royalMonth.length === 0) {
+      cur = new Date(y, m + 1, 1); continue;
+    }
+
+    // Month section
+    const section = document.createElement('div');
+    section.className = 'tl-month-section';
+
+    // Month heading
+    const heading = document.createElement('div');
+    heading.className = 'tl-month-heading';
+    heading.textContent = `${MONTHS[m]} ${y}`;
+    section.appendChild(heading);
+
+    // Shared axis
+    const tickDays = [1, Math.round(daysInMonth * 0.25), Math.round(daysInMonth * 0.5), Math.round(daysInMonth * 0.75), daysInMonth];
+
+    function makeAxisRow() {
+      const axisRow = document.createElement('div');
+      axisRow.className = 'tl-axis-row';
+      const spacer = document.createElement('div');
+      spacer.className = 'tl-axis-spacer';
+      axisRow.appendChild(spacer);
+      const axisRail = document.createElement('div');
+      axisRail.className = 'tl-axis-rail';
+      tickDays.forEach((d, i) => {
+        const pct = ((d - 1) / (daysInMonth - 1)) * 100;
+        const lbl = document.createElement('div');
+        lbl.className = 'tl-axis-label';
+        lbl.style.left = pct + '%';
+        if (i === tickDays.length - 1) lbl.style.transform = 'translateX(-100%)';
+        lbl.textContent = d;
+        axisRail.appendChild(lbl);
+      });
+      axisRow.appendChild(axisRail);
+      return axisRow;
+    }
+
+    function makeTrack(b, houseAccent) {
+      const barStart = b.start < monthStart ? monthStart : b.start;
+      const barEnd   = b.end   > monthEnd   ? monthEnd   : b.end;
+      const startDay = parseYMD(barStart).getDate();
+      const endDay   = parseYMD(barEnd).getDate();
+      const leftPct  = ((startDay - 1) / daysInMonth) * 100;
+      const widthPct = Math.max(((endDay / daysInMonth) * 100) - leftPct, 1.5);
+
+      const track = document.createElement('div');
+      track.className = 'tl-track';
+
+      const name = document.createElement('div');
+      name.className = 'tl-name';
+      name.textContent = b.name;
+      name.title = b.name;
+
+      const rail = document.createElement('div');
+      rail.className = 'tl-rail';
+
+      const ticks = document.createElement('div');
+      ticks.className = 'tl-rail-ticks';
+      tickDays.slice(1, -1).forEach(d => {
+        const pct = ((d - 1) / (daysInMonth - 1)) * 100;
+        const tick = document.createElement('div');
+        tick.className = 'tl-tick';
+        tick.style.left = pct + '%';
+        ticks.appendChild(tick);
+      });
+      rail.appendChild(ticks);
+
+      const bar = document.createElement('div');
+      bar.className = 'tl-bar';
+      bar.style.left = leftPct + '%';
+      bar.style.width = widthPct + '%';
+      bar.style.background = houseAccent;
+      bar.title = `${b.name}: ${formatRange(b.start, b.end)}`;
+
+      if (widthPct > 12) {
+        const barLabel = document.createElement('div');
+        barLabel.className = 'tl-bar-label';
+        barLabel.textContent = `${startDay}–${endDay}`;
+        bar.appendChild(barLabel);
+      }
+
+      rail.appendChild(bar);
+      track.appendChild(name);
+      track.appendChild(rail);
+      return track;
+    }
+
+    // Render each house group within this month
+    [['port', portMonth], ['royal', royalMonth]].forEach(([hKey, monthBs]) => {
+      if (monthBs.length === 0) return;
+      const h = HOUSES[hKey];
+
+      // House pill
+      const pill = document.createElement('div');
+      pill.className = 'tl-house-label';
+      pill.style.background = h.accent;
+      pill.textContent = h.short;
+      section.appendChild(pill);
+
+      section.appendChild(makeAxisRow());
+
+      monthBs.sort((a, b) => a.start.localeCompare(b.start))
+             .forEach(b => section.appendChild(makeTrack(b, h.accent)));
+
+      // Small gap between houses within same month
+      const gap = document.createElement('div');
+      gap.style.height = '10px';
+      section.appendChild(gap);
+    });
+
+    container.appendChild(section);
+    cur = new Date(y, m + 1, 1);
+  }
+}
+
+// ── BOTH TAB SWITCHER ─────────────────────────────────────────────────────────
+
+function setBothTab(tab) {
+  const tlBtn  = document.getElementById('both-tab-timeline');
+  const pepBtn = document.getElementById('both-tab-people');
+  const tlBody  = document.getElementById('both-content');
+  const pepBody = document.getElementById('both-people-content');
+  const accent = house().accent;
+  const activeStyle  = `font-family:-apple-system,sans-serif;font-size:12px;font-weight:700;padding:5px 14px;border-radius:20px;border:2px solid ${accent};background:${accent};color:#fff;cursor:pointer;`;
+  const inactiveStyle = `font-family:-apple-system,sans-serif;font-size:12px;font-weight:700;padding:5px 14px;border-radius:20px;border:2px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;`;
+
+  if (tab === 'people') {
+    pepBtn.style.cssText = activeStyle;
+    tlBtn.style.cssText  = inactiveStyle;
+    pepBody.style.display = '';
+    tlBody.style.display  = 'none';
+    renderBothPeople();
+  } else {
+    tlBtn.style.cssText  = activeStyle;
+    pepBtn.style.cssText = inactiveStyle;
+    tlBody.style.display  = '';
+    pepBody.style.display = 'none';
+    renderBoth();
+  }
+}
+
+function renderBothPeople() {
+  const container = document.getElementById('both-people-content');
+  container.innerHTML = '';
+
+  const tYMD = todayYMD();
+
+  // Load both houses
+  const allBookings = {};
+  Object.values(HOUSES).forEach(h => {
+    try {
+      const raw = localStorage.getItem(h.storageKey);
+      allBookings[h.key] = raw ? JSON.parse(raw) : [];
+    } catch { allBookings[h.key] = []; }
+  });
+
+  // Month nav
+  const nav = document.createElement('div');
+  nav.className = 'cal-nav';
+  nav.style.marginBottom = '16px';
+
+  const prevBtn = document.createElement('button');
+  prevBtn.className = 'cal-nav-btn';
+  prevBtn.textContent = '‹';
+
+  const monthLabel = document.createElement('div');
+  monthLabel.className = 'cal-month-label';
+
+  const nextBtn = document.createElement('button');
+  nextBtn.className = 'cal-nav-btn';
+  nextBtn.textContent = '›';
+
+  nav.appendChild(prevBtn);
+  nav.appendChild(monthLabel);
+  nav.appendChild(nextBtn);
+  container.appendChild(nav);
+
+  // Calendar grid container
+  const gridWrap = document.createElement('div');
+  container.appendChild(gridWrap);
+
+  let year = new Date().getFullYear();
+  let month = new Date().getMonth();
+
+  function drawCalendar() {
+    monthLabel.textContent = `${MONTHS[month]} ${year}`;
+    gridWrap.innerHTML = '';
+
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const firstDay = new Date(year, month, 1).getDay();
+
+    const grid = document.createElement('div');
+    grid.className = 'cal-grid';
+
+    DAYS_SHORT.forEach(d => {
+      const hdr = document.createElement('div');
+      hdr.className = 'cal-day-header';
+      hdr.textContent = d;
+      grid.appendChild(hdr);
+    });
+
+    for (let i = 0; i < firstDay; i++) grid.appendChild(document.createElement('div'));
+
+    for (let d = 1; d <= daysInMonth; d++) {
+      const ymd = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      const portB  = allBookings.port.filter(b => datesInRange(b.start, b.end).includes(ymd));
+      const royalB = allBookings.royal.filter(b => datesInRange(b.start, b.end).includes(ymd));
+      const hasAny = portB.length > 0 || royalB.length > 0;
+      const isToday = ymd === tYMD;
+
+      const cell = document.createElement('div');
+      cell.className = 'cal-cell' + (isToday ? ' today' : '') + (hasAny ? ' has-bookings' : '');
+      cell.style.cursor = hasAny ? 'pointer' : 'default';
+
+      const dayNum = document.createElement('div');
+      dayNum.className = 'cal-cell-day';
+      dayNum.textContent = d;
+      if (isToday) dayNum.style.color = house().accentDark;
+      cell.appendChild(dayNum);
+
+      // Show colored dots per house
+      if (portB.length > 0) {
+        const dot = document.createElement('div');
+        dot.style.cssText = `height:4px;border-radius:2px;background:${HOUSES.port.accent};margin-top:3px;`;
+        cell.appendChild(dot);
+      }
+      if (royalB.length > 0) {
+        const dot = document.createElement('div');
+        dot.style.cssText = `height:4px;border-radius:2px;background:${HOUSES.royal.accent};margin-top:2px;`;
+        cell.appendChild(dot);
+      }
+
+      if (hasAny) {
+        cell.onclick = () => openBothPeopleDay(ymd, portB, royalB);
+      }
+
+      grid.appendChild(cell);
+    }
+
+    gridWrap.appendChild(grid);
+  }
+
+  prevBtn.onclick = () => { month--; if (month < 0) { month = 11; year--; } drawCalendar(); };
+  nextBtn.onclick = () => { month++; if (month > 11) { month = 0; year++; } drawCalendar(); };
+
+  drawCalendar();
+}
+
+function openBothPeopleDay(ymd, portBookings, royalBookings) {
+  const date = parseYMD(ymd);
+  const label = date.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric', year:'numeric' });
+
+  document.getElementById('day-tab-reservations').style.display = 'none';
+  document.getElementById('day-tab-people').style.display = 'none';
+  document.getElementById('day-tab-events').style.display = 'none';
+  document.getElementById('day-modal-body').style.display = '';
+  document.getElementById('day-modal-people').style.display = 'none';
+  document.getElementById('day-modal-events').style.display = 'none';
+  document.getElementById('day-add-btn').style.display = 'none';
+  document.getElementById('day-add-event-btn').style.display = 'none';
+
+  // Title with prev/next arrows
+  const titleEl = document.getElementById('day-modal-title');
+  titleEl.style.display = 'flex';
+  titleEl.style.alignItems = 'center';
+  titleEl.style.gap = '8px';
+  titleEl.innerHTML = `
+    <button onclick="navigateBothDay('${ymd}', -1)" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--muted);padding:0;flex-shrink:0;">‹</button>
+    <span style="flex:1;font-size:17px;">${label}</span>
+    <button onclick="navigateBothDay('${ymd}', 1)" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--muted);padding:0;flex-shrink:0;">›</button>`;
+
+  const body = document.getElementById('day-modal-body');
+  body.innerHTML = '';
+
+  // Load both houses fresh
+  const allB = {};
+  Object.values(HOUSES).forEach(h => {
+    try { const raw = localStorage.getItem(h.storageKey); allB[h.key] = raw ? JSON.parse(raw) : []; }
+    catch { allB[h.key] = []; }
+  });
+  const pB = allB.port.filter(b => datesInRange(b.start, b.end).includes(ymd));
+  const rB = allB.royal.filter(b => datesInRange(b.start, b.end).includes(ymd));
+
+  let totalPeople = 0;
+  [...pB, ...rB].forEach(b => totalPeople += b.guests);
+
+  if (totalPeople === 0) {
+    body.innerHTML = '<p style="font-family:-apple-system,sans-serif;font-size:14px;color:#889;text-align:center;padding:20px 0;">No guests at either house.</p>';
+  } else {
+    const summary = document.createElement('p');
+    summary.style.cssText = 'font-family:-apple-system,sans-serif;font-size:13px;color:var(--muted);margin-bottom:14px;';
+    summary.textContent = `${totalPeople} people across both houses`;
+    body.appendChild(summary);
+
+    [['port', pB], ['royal', rB]].forEach(([hKey, bList]) => {
+      if (bList.length === 0) return;
+      const h = HOUSES[hKey];
+
+      const pill = document.createElement('div');
+      pill.style.cssText = `background:${h.accent};font-family:-apple-system,sans-serif;font-size:11px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;padding:5px 10px;border-radius:20px;color:#fff;display:inline-block;margin-bottom:10px;`;
+      pill.textContent = h.short;
+      body.appendChild(pill);
+
+      bList.forEach(b => {
+        const color = guestColor(b.name);
+        const names = Array.isArray(b.individuals) ? b.individuals.filter(Boolean) : [];
+        const section = document.createElement('div');
+        section.style.cssText = `margin-bottom:8px;border-left:3px solid ${color};border-radius:8px;padding:10px 12px;background:#f8f8f6;`;
+        const groupLabel = document.createElement('div');
+        groupLabel.style.cssText = 'font-family:-apple-system,sans-serif;font-size:13px;font-weight:700;color:var(--ink);margin-bottom:4px;display:flex;justify-content:space-between;align-items:center;';
+        groupLabel.innerHTML = `<span>${escHtml(b.name)} · ${b.guests} guest${b.guests!==1?'s':''}</span>${isAdmin ? `<button onclick="editNamesFromBoth('${b.id}')" style="background:none;border:2px solid var(--border);border-radius:20px;font-size:11px;font-weight:700;font-family:-apple-system,sans-serif;color:var(--muted);padding:3px 9px;cursor:pointer;">+ Names</button>` : ''}`;
+        section.appendChild(groupLabel);
+        if (names.length > 0) {
+          names.forEach(n => {
+            const row = document.createElement('div');
+            row.style.cssText = 'display:flex;align-items:center;gap:7px;padding:2px 0;font-family:-apple-system,sans-serif;font-size:12px;color:var(--muted);';
+            row.innerHTML = `<span style="width:5px;height:5px;border-radius:50%;background:${color};flex-shrink:0;display:inline-block;"></span>${escHtml(n)}`;
+            section.appendChild(row);
+          });
+        } else {
+          const note = document.createElement('div');
+          note.style.cssText = 'font-family:-apple-system,sans-serif;font-size:12px;color:var(--light-muted);font-style:italic;';
+          note.textContent = 'No names added';
+          section.appendChild(note);
+        }
+        body.appendChild(section);
+      });
+
+      const gap = document.createElement('div');
+      gap.style.height = '6px';
+      body.appendChild(gap);
+    });
+  }
+
+  // Restore on close
+  const overlay = document.getElementById('modal-day');
+  const origClose = overlay.querySelector('.modal-close');
+  const newClose = origClose.cloneNode(true);
+  newClose.onclick = () => {
+    closeModal('modal-day');
+    document.getElementById('day-modal-title').style = '';
+    document.getElementById('day-tab-reservations').style.display = '';
+    document.getElementById('day-tab-people').style.display = '';
+  };
+  origClose.parentNode.replaceChild(newClose, origClose);
+
+  openModal('modal-day');
+}
+
+function editNamesFromBoth(id) {
+  // Find which house this booking belongs to
+  let found = false;
+  Object.values(HOUSES).forEach(h => {
+    try {
+      const raw = localStorage.getItem(h.storageKey);
+      const hBookings = raw ? JSON.parse(raw) : [];
+      if (hBookings.find(b => b.id === id)) {
+        // Temporarily load that house's bookings so openNamesModal works
+        bookings = hBookings;
+        found = true;
+      }
+    } catch {}
+  });
+  if (!found) return;
+  editingId = id;
+  closeModal('modal-day');
+  openNamesModal();
+}
+
+function navigateBothDay(ymd, dir) {
+  const d = parseYMD(ymd);
+  d.setDate(d.getDate() + dir);
+  openBothPeopleDay(toYMD(d));
+}
+
+// ── ALL RENDER ───────────────────────────────────────────────────────────────
+
+function renderAll() {
+  renderCalendar();
+  renderUpcoming();
+  renderTimeline();
+  if (currentView === 'both') setBothTab('people');
+  else renderBoth();
+}
+
+// ── EVENTS ────────────────────────────────────────────────────────────────────
+
+function openEventForm(date, eventId) {
+  editingEventId = eventId || null;
+  const ev = eventId ? events.find(e => e.id === eventId) : null;
+  document.getElementById('event-form-title').textContent = ev ? 'Edit Event' : 'Add Event';
+  document.getElementById('ev-save-btn').textContent = ev ? 'Save Event' : 'Add Event';
+  document.getElementById('ev-name').value = ev ? ev.name : '';
+  document.getElementById('ev-emoji').value = ev ? (ev.emoji || '') : '🎉';
+  document.getElementById('ev-date').value = ev ? ev.date : (date || toYMD(new Date()));
+  document.getElementById('ev-error').style.display = 'none';
+  setEventVisibility(ev ? ev.visibility : 'public');
+  openModal('modal-event');
+}
+
+function setEventVisibility(v) {
+  currentEventVisibility = v;
+  const pubBtn = document.getElementById('ev-public-btn');
+  const priBtn = document.getElementById('ev-private-btn');
+  const hint = document.getElementById('ev-visibility-hint');
+  const accent = house().accent;
+  if (v === 'public') {
+    pubBtn.style.cssText = `flex:1;font-family:-apple-system,sans-serif;font-size:13px;font-weight:700;padding:10px;border-radius:8px;border:2px solid ${accent};background:${accent};color:#fff;cursor:pointer;`;
+    priBtn.style.cssText = `flex:1;font-family:-apple-system,sans-serif;font-size:13px;font-weight:700;padding:10px;border-radius:8px;border:2px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;`;
+    hint.textContent = 'Visible to everyone with the link.';
+  } else {
+    pubBtn.style.cssText = `flex:1;font-family:-apple-system,sans-serif;font-size:13px;font-weight:700;padding:10px;border-radius:8px;border:2px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;`;
+    priBtn.style.cssText = `flex:1;font-family:-apple-system,sans-serif;font-size:13px;font-weight:700;padding:10px;border-radius:8px;border:2px solid #556677;background:#556677;color:#fff;cursor:pointer;`;
+    hint.textContent = 'Only visible to admins.';
+  }
+}
+
+function saveEvent() {
+  const name = document.getElementById('ev-name').value.trim();
+  const date = document.getElementById('ev-date').value;
+  const emoji = document.getElementById('ev-emoji').value.trim() || '🎉';
+  const errEl = document.getElementById('ev-error');
+  if (!name) { errEl.textContent = 'Event name is required.'; errEl.style.display = 'block'; return; }
+  if (!date) { errEl.textContent = 'Please set a date.'; errEl.style.display = 'block'; return; }
+
+  if (editingEventId) {
+    events = events.map(e => e.id === editingEventId ? { ...e, name, date, emoji, visibility: currentEventVisibility } : e);
+    showToast('Event updated ✓');
+  } else {
+    events.push({ id: Date.now().toString(), name, date, emoji, visibility: currentEventVisibility });
+    showToast('Event added ✓');
+  }
+  saveEvents();
+  closeModal('modal-event');
+  renderAll();
+  openDayDetail(date);
+}
+
+function deleteEvent(id) {
+  const ev = events.find(e => e.id === id);
+  if (!ev) return;
+  const date = ev.date;
+  events = events.filter(e => e.id !== id);
+  saveEvents();
+  renderAll();
+  openDayDetail(date);
+  showToast('Event removed');
+}
+
+function renderDayEvents() {
+  const body = document.getElementById('day-modal-events');
+  body.innerHTML = '';
+  const dayEvents = eventsForDate(dayForAdd);
+
+  if (dayEvents.length === 0) {
+    body.innerHTML = '<p style="font-family:-apple-system,sans-serif;font-size:14px;color:#889;padding:4px 0 4px;">No events on this day.</p>';
+  } else {
+    dayEvents.forEach(ev => {
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;background:#f8f8f6;border-radius:10px;margin-bottom:8px;';
+      const privBadge = ev.visibility === 'private'
+        ? `<span style="font-family:-apple-system,sans-serif;font-size:10px;font-weight:700;background:#e0e0e0;color:#556;padding:2px 7px;border-radius:10px;margin-left:6px;">Private</span>`
+        : '';
+      row.innerHTML = `
+        <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;">
+          <span style="font-size:22px;flex-shrink:0;">${ev.emoji || '🎉'}</span>
+          <div style="font-family:-apple-system,sans-serif;font-size:14px;font-weight:700;color:var(--ink);">${escHtml(ev.name)}${privBadge}</div>
+        </div>
+        ${isAdmin ? `<div style="display:flex;gap:6px;">
+          <button class="btn btn-ghost" onclick="closeModal('modal-day');openEventForm('${ev.date}','${ev.id}')" style="padding:6px 10px;font-size:12px;">Edit</button>
+          <button class="btn btn-danger" onclick="deleteEvent('${ev.id}')" style="padding:6px 10px;font-size:12px;">✕</button>
+        </div>` : ''}`;
+      body.appendChild(row);
+    });
+  }
+}
+
+// ── DAY DETAIL MODAL ─────────────────────────────────────────────────────────
+
+let currentDayBookings = [];
+
+function openDayDetail(ymd) {
+  const date = parseYMD(ymd);
+  document.getElementById('day-modal-title').textContent =
+    date.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric', year:'numeric' });
+
+  currentDayBookings = bookingsForDate(ymd);
+  dayForAdd = ymd;
+
+  const dayEvts = eventsForDate(ymd);
+
+  setDayTab('reservations');
+
+  const addBtn = document.getElementById('day-add-btn');
+  addBtn.style.display = isAdmin ? 'flex' : 'none';
+  addBtn.style.background = house().accent;
+
+  const addEventBtn = document.getElementById('day-add-event-btn');
+  addEventBtn.style.display = isAdmin ? 'flex' : 'none';
+
+  // Only show events tab if there are events on this day
+  document.getElementById('day-tab-events').style.display = dayEvts.length > 0 ? '' : 'none';
+
+  openModal('modal-day');
+}
+
+function setDayTab(tab) {
+  const resBtn = document.getElementById('day-tab-reservations');
+  const pepBtn = document.getElementById('day-tab-people');
+  const evtBtn = document.getElementById('day-tab-events');
+  const resBody = document.getElementById('day-modal-body');
+  const pepBody = document.getElementById('day-modal-people');
+  const evtBody = document.getElementById('day-modal-events');
+  const addResBtn = document.getElementById('day-add-btn');
+  const addEvtBtn = document.getElementById('day-add-event-btn');
+
+  const activeStyle = `font-family:-apple-system,sans-serif;font-size:12px;font-weight:700;padding:5px 14px;border-radius:20px;border:2px solid ${house().accent};background:${house().accent};color:#fff;cursor:pointer;`;
+  const inactiveStyle = `font-family:-apple-system,sans-serif;font-size:12px;font-weight:700;padding:5px 14px;border-radius:20px;border:2px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;`;
+
+  resBtn.style.cssText = tab === 'reservations' ? activeStyle : inactiveStyle;
+  pepBtn.style.cssText = tab === 'people'       ? activeStyle : inactiveStyle;
+  evtBtn.style.cssText = tab === 'events'       ? activeStyle : inactiveStyle;
+
+  resBody.style.display = tab === 'reservations' ? '' : 'none';
+  pepBody.style.display = tab === 'people'       ? '' : 'none';
+  evtBody.style.display = tab === 'events'       ? '' : 'none';
+
+  // Re-evaluate events tab visibility on every tab switch
+  const dayEvts = eventsForDate(dayForAdd);
+  document.getElementById('day-tab-events').style.display = dayEvts.length > 0 ? '' : 'none';
+
+  // Bottom buttons
+  if (addResBtn) addResBtn.style.display = (tab === 'reservations' && isAdmin) ? 'flex' : 'none';
+  if (addEvtBtn) addEvtBtn.style.display = (tab === 'events' && isAdmin) ? 'flex' : 'none';
+
+  if (tab === 'reservations') renderDayReservations();
+  else if (tab === 'people') renderDayPeople();
+  else if (tab === 'events') renderDayEvents();
+}
+
+function renderDayReservations() {
+  const body = document.getElementById('day-modal-body');
+  body.innerHTML = '';
+
+  if (currentDayBookings.length === 0) {
+    body.innerHTML = '<p style="font-family:-apple-system,sans-serif;font-size:14px;color:#889;padding:4px 0 8px;">No reservations on this date.</p>';
+    return;
+  }
+
+  currentDayBookings.forEach(b => {
+    const color = guestColor(b.name);
+    const div = document.createElement('div');
+    div.className = 'detail-booking';
+    div.style.borderLeft = `4px solid ${color}`;
+
+    let actionsHtml = '';
+    if (isAdmin) {
+      actionsHtml = `
+        <div style="display:flex;gap:8px;margin-top:10px;">
+          <button class="btn btn-ghost" onclick="closeModal('modal-day');openEditForm('${b.id}','${currentDayBookings.length ? dayForAdd : ''}')">Edit</button>
+          <button class="btn btn-danger" onclick="deleteBooking('${b.id}')">Remove</button>
+        </div>`;
+    }
+
+    div.innerHTML = `
+      <div class="booking-name">${escHtml(b.name)}</div>
+      <div class="booking-meta">${b.guests} guest${b.guests!==1?'s':''} · ${formatRange(b.start, b.end)}</div>
+      ${b.individuals && b.individuals.length > 0
+        ? `<div style="margin-top:8px;display:flex;flex-direction:column;gap:4px;">
+            ${(Array.isArray(b.individuals) ? b.individuals : b.individuals.split(',').map(s=>s.trim()))
+              .map(n => `<div style="font-family:-apple-system,sans-serif;font-size:13px;color:var(--ink);display:flex;align-items:center;gap:6px;">
+                <span style="width:6px;height:6px;border-radius:50%;background:${color};flex-shrink:0;display:inline-block;"></span>
+                ${escHtml(n)}
+              </div>`).join('')}
+           </div>`
+        : ''}
+      ${b.notes ? `<div class="booking-notes" style="margin-top:6px;">${escHtml(b.notes)}</div>` : ''}
+      ${actionsHtml}`;
+    body.appendChild(div);
+  });
+}
+
+function renderDayPeople() {
+  const body = document.getElementById('day-modal-people');
+  body.innerHTML = '';
+
+  if (currentDayBookings.length === 0) {
+    body.innerHTML = '<p style="font-family:-apple-system,sans-serif;font-size:14px;color:#889;">No reservations on this date.</p>';
+    return;
+  }
+
+  // Collect everyone — named individuals + unnamed guest counts
+  let totalGuests = 0;
+  let namedPeople = [];
+
+  currentDayBookings.forEach(b => {
+    const color = guestColor(b.name);
+    totalGuests += b.guests;
+    const names = Array.isArray(b.individuals) ? b.individuals : (b.individuals ? b.individuals.split(',').map(s=>s.trim()) : []);
+    names.forEach(n => namedPeople.push({ name: n, group: b.name, color }));
+    // Add unnamed slots
+    const unnamed = b.guests - names.length;
+    for (let i = 0; i < unnamed; i++) {
+      namedPeople.push({ name: null, group: b.name, color });
+    }
+  });
+
+  // Header count
+  const header = document.createElement('div');
+  header.style.cssText = 'font-family:-apple-system,sans-serif;font-size:13px;color:var(--muted);margin-bottom:12px;';
+  header.textContent = `${totalGuests} people across ${currentDayBookings.length} reservation${currentDayBookings.length!==1?'s':''}`;
+  body.appendChild(header);
+
+  // Group by reservation
+  currentDayBookings.forEach(b => {
+    const color = guestColor(b.name);
+    const names = Array.isArray(b.individuals) ? b.individuals : (b.individuals ? b.individuals.split(',').map(s=>s.trim()) : []);
+    const unnamed = b.guests - names.length;
+
+    const section = document.createElement('div');
+    section.style.cssText = 'margin-bottom:14px;';
+
+    // Group label
+    const groupLabel = document.createElement('div');
+    groupLabel.style.cssText = `font-family:-apple-system,sans-serif;font-size:11px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:${color};margin-bottom:6px;`;
+    groupLabel.textContent = b.name;
+    section.appendChild(groupLabel);
+
+    // Named people only
+    names.forEach(n => {
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:7px 10px;background:#f8f8f6;border-radius:8px;margin-bottom:4px;';
+      row.innerHTML = `
+        <span style="width:8px;height:8px;border-radius:50%;background:${color};flex-shrink:0;"></span>
+        <span style="font-family:-apple-system,sans-serif;font-size:14px;font-weight:600;color:var(--ink);">${escHtml(n)}</span>`;
+      section.appendChild(row);
+    });
+
+    // If no names at all, show a placeholder
+    if (names.length === 0) {
+      const row = document.createElement('div');
+      row.style.cssText = 'padding:4px 0;font-family:-apple-system,sans-serif;font-size:13px;color:var(--light-muted);font-style:italic;';
+      row.textContent = `${b.guests} guest${b.guests!==1?'s':''} (no names added)`;
+      section.appendChild(row);
+    }
+
+    // Admin + Names button
+    if (isAdmin) {
+      const btn = document.createElement('button');
+      btn.style.cssText = 'margin-top:8px;background:none;border:2px solid var(--border);border-radius:20px;font-size:11px;font-weight:700;font-family:-apple-system,sans-serif;color:var(--muted);padding:4px 12px;cursor:pointer;';
+      btn.textContent = '+ Names';
+      btn.onclick = () => { editingId = b.id; closeModal('modal-day'); openNamesModal(); };
+      section.appendChild(btn);
+    }
+
+    body.appendChild(section);
+  });
+}
+
+function addFromDay() {
+  closeModal('modal-day');
+  openAddForm(dayForAdd);
+}
+
+// ── FORM MODAL ───────────────────────────────────────────────────────────────
+
+function openAddForm(defaultDate) {
+  editingId = null;
+  document.getElementById('form-title').textContent = 'Add Reservation';
+  document.getElementById('form-save-btn').textContent = 'Add Reservation';
+  document.getElementById('f-move-row').style.display = 'none';
+  document.getElementById('f-name').value = '';
+  document.getElementById('f-guests').value = '2';
+  document.getElementById('f-guests-display').textContent = '2';
+  const d = defaultDate || todayYMD();
+  document.getElementById('f-start').value = d;
+  document.getElementById('f-end').value = d;
+  document.getElementById('f-notes').value = '';
+  clearFormError();
+  document.getElementById('form-overlap-warning').style.display = 'none';
+  openModal('modal-form');
+}
+
+function openEditForm(id, returnDay) {
+  const b = bookings.find(x => x.id === id);
+  if (!b) return;
+  if (returnDay) dayForAdd = returnDay;
+  editingId = id;
+  document.getElementById('form-title').textContent = 'Edit Reservation';
+  document.getElementById('form-save-btn').textContent = 'Save Changes';
+  const otherHouse = HOUSES[currentHouse === 'port' ? 'royal' : 'port'];
+  const moveBtn = document.getElementById('f-move-btn');
+  moveBtn.textContent = `⇄ Move to ${otherHouse.short}`;
+  document.getElementById('f-move-row').style.display = 'flex';
+  document.getElementById('f-name').value = b.name;
+  document.getElementById('f-guests').value = b.guests;
+  document.getElementById('f-guests-display').textContent = b.guests;
+  document.getElementById('f-start').value = b.start;
+  document.getElementById('f-end').value = b.end;
+  document.getElementById('f-notes').value = b.notes || '';
+  clearFormError();
+  document.getElementById('form-overlap-warning').style.display = 'none';
+  openModal('modal-form');
+}
+
+function updateGuestNameFields(existingNames) {
+  const count = Math.min(parseInt(document.getElementById('f-guests').value) || 1, 20);
+  const container = document.getElementById('f-guest-names');
+  const currentInputs = [...container.querySelectorAll('input')];
+  const currentCount = currentInputs.length;
+
+  // Full reset — called from openAddForm([]) or openEditForm(savedNames)
+  if (Array.isArray(existingNames)) {
+    container.innerHTML = '';
+    for (let i = 0; i < count; i++) {
+      container.appendChild(makeNameInput(i, existingNames[i] || ''));
+    }
+    return;
+  }
+
+  // Slider moved — just add or trim, never touch existing values
+  if (count > currentCount) {
+    for (let i = currentCount; i < count; i++) {
+      container.appendChild(makeNameInput(i, ''));
+    }
+  } else if (count < currentCount) {
+    for (let i = currentCount - 1; i >= count; i--) {
+      container.removeChild(currentInputs[i]);
+    }
+  }
+}
+
+function makeNameInput(index, value) {
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'form-input';
+  input.placeholder = `Guest ${index + 1} name`;
+  input.style.marginBottom = '0';
+  input.value = value || '';
+  return input;
+}
+
+function getGuestNames() {
+  return [...document.querySelectorAll('#f-guest-names input')].map(i => i.value.trim()).filter(Boolean);
+}
+
+function moveToOtherHouse() {
+  if (!editingId) return;
+  const b = bookings.find(x => x.id === editingId);
+  if (!b) return;
+  const otherKey = currentHouse === 'port' ? 'royal' : 'port';
+  const otherHouse = HOUSES[otherKey];
+
+  // Remove from current house
+  bookings = bookings.filter(x => x.id !== editingId);
+  saveBookings();
+
+  // Add to other house
+  try {
+    const raw = localStorage.getItem(otherHouse.storageKey);
+    const otherBookings = raw ? JSON.parse(raw) : [];
+    otherBookings.push({ ...b });
+    localStorage.setItem(otherHouse.storageKey, JSON.stringify(otherBookings));
+  } catch(e) { console.error('Move failed', e); }
+
+  closeModal('modal-form');
+  renderAll();
+  showToast(`Moved to ${otherHouse.short} ✓`);
+}
+
+function onStartDateChange() {
+  const start = document.getElementById('f-start').value;
+  const endInput = document.getElementById('f-end');
+  // Don't set min — Android locks the picker. Just snap the value if it's earlier.
+  if (!endInput.value || endInput.value < start) {
+    endInput.value = start;
+  }
+  updateOverlapWarning();
+}
+
+function checkOverlap(start, end) {
+  if (!start || !end || start > end) return [];
+  const newDates = new Set(datesInRange(start, end));
+  return bookings.filter(b => {
+    if (b.id === editingId) return false; // skip self when editing
+    const bDates = datesInRange(b.start, b.end);
+    return bDates.some(d => newDates.has(d));
+  });
+}
+
+function updateOverlapWarning() {
+  const start = document.getElementById('f-start').value;
+  const end = document.getElementById('f-end').value;
+  const warning = document.getElementById('form-overlap-warning');
+  // Only warn if both dates are set and user has interacted
+  if (!start || !end || start > end) { warning.style.display = 'none'; return; }
+  const overlaps = checkOverlap(start, end);
+  if (overlaps.length === 0) { warning.style.display = 'none'; return; }
+  const names = overlaps.map(b => b.name).join(', ');
+  warning.style.display = 'block';
+  warning.innerHTML = `⚠️ <strong>Heads up:</strong> ${overlaps.length === 1 ? 'Another reservation overlaps' : `${overlaps.length} other reservations overlap`} these dates — <em>${names}</em>. You can still save.`;
+}
+
+function saveBooking() {
+  const name = document.getElementById('f-name').value.trim();
+  const guests = parseInt(document.getElementById('f-guests').value) || 1;
+  const individuals = getGuestNames();
+  const start = document.getElementById('f-start').value;
+  const end = document.getElementById('f-end').value;
+  const notes = document.getElementById('f-notes').value.trim();
+
+  if (!name) { showFormError('Guest name is required.'); return; }
+  if (!start || !end) { showFormError('Please set check-in and check-out dates.'); return; }
+  if (start > end) { showFormError('Check-out must be after check-in.'); return; }
+
+  const wasEditing = !!editingId && bookings.some(b => b.id === editingId);
+
+  if (wasEditing) {
+    bookings = bookings.map(b => b.id === editingId ? { ...b, name, guests, start, end, notes } : b);
+    saveBookings();
+    closeModal('modal-form');
+    dayForAdd = start;
+    editingId = null;
+    renderAll();
+    showToast('Reservation updated ✓');
+    openDayDetail(start);
+  } else {
+    const newId = Date.now().toString();
+    bookings.push({ id: newId, name, guests, individuals: [], start, end, notes });
+    editingId = newId;
+    dayForAdd = start;
+    saveBookings();
+    closeModal('modal-form');
+    renderAll();
+    openNamesModal();
+  }
+}
+
+function openNamesModal() {
+  const b = bookings.find(x => x.id === editingId);
+  if (!b) return;
+  const count = b.guests;
+  const existing = Array.isArray(b.individuals) ? b.individuals : [];
+
+  document.getElementById('names-modal-title').textContent = `Who's coming?`;
+  document.getElementById('names-modal-sub').textContent = `${b.name} · ${count} guest${count !== 1 ? 's' : ''}`;
+
+  const container = document.getElementById('names-fields');
+  container.innerHTML = '';
+  for (let i = 0; i < count; i++) {
+    container.appendChild(makeNameInput(i, existing[i] || ''));
+  }
+
+  openModal('modal-names');
+}
+
+function skipGuestNames() {
+  const returnDay = dayForAdd;
+  editingId = null;
+  closeModal('modal-names');
+  renderAll();
+  showToast('Reservation added ✓');
+  if (returnDay) openDayDetail(returnDay);
+}
+
+function saveGuestNames() {
+  if (!editingId) { closeModal('modal-names'); return; }
+  const names = [...document.querySelectorAll('#names-fields input')].map(i => i.value.trim()).filter(Boolean);
+
+  // Find which house owns this booking and save there
+  let savedDay = null;
+  Object.values(HOUSES).forEach(h => {
+    try {
+      const raw = localStorage.getItem(h.storageKey);
+      const hBookings = raw ? JSON.parse(raw) : [];
+      const idx = hBookings.findIndex(b => b.id === editingId);
+      if (idx !== -1) {
+        savedDay = hBookings[idx].start;
+        hBookings[idx] = { ...hBookings[idx], individuals: names };
+        localStorage.setItem(h.storageKey, JSON.stringify(hBookings));
+      }
+    } catch {}
+  });
+
+  // Reload current house bookings
+  loadBookings();
+  closeModal('modal-names');
+  const returnDay = savedDay || dayForAdd;
+  editingId = null;
+  renderAll();
+  showToast('Names saved ✓');
+  if (returnDay) openDayDetail(returnDay);
+}
+
+let pendingDeleteId = null;
+
+function deleteBooking(id) {
+  const b = bookings.find(x => x.id === id);
+  if (!b) return;
+  pendingDeleteId = id;
+  document.getElementById('confirm-msg').textContent = `This will remove the reservation for ${b.name} (${formatRange(b.start, b.end)}).`;
+  closeModal('modal-day');
+  openModal('modal-confirm');
+}
+
+function confirmDelete() {
+  if (!pendingDeleteId) return;
+  bookings = bookings.filter(b => b.id !== pendingDeleteId);
+  pendingDeleteId = null;
+  saveBookings();
+  closeModal('modal-confirm');
+  showToast('Reservation removed');
+  renderAll();
+}
+
+// ── SHARE ────────────────────────────────────────────────────────────────────
+
+function copyShareLink() {
+  const url = `${location.origin}${location.pathname}?house=${currentHouse}`;
+  const btn = document.getElementById('share-btn');
+  const label = document.getElementById('share-btn-label');
+  const icon = document.getElementById('share-btn-icon');
+
+  function markCopied() {
+    btn.classList.add('copied');
+    icon.textContent = '✓';
+    label.textContent = 'Link Copied!';
+    setTimeout(() => {
+      btn.classList.remove('copied');
+      btn.style.background = 'transparent';
+      btn.style.borderColor = house().accent;
+      btn.style.color = house().accent;
+      icon.textContent = '🔗';
+      label.textContent = 'Share View Link';
+    }, 2200);
+  }
+
+  // Try native share sheet first (works great on mobile)
+  if (navigator.share) {
+    navigator.share({
+      title: house().short + ' — Hilton Head',
+      text: 'View the schedule for ' + house().name,
+      url: url
+    }).catch(() => {}); // user cancelled, do nothing
+    return;
+  }
+
+  // Fallback: clipboard
+  navigator.clipboard.writeText(url).then(markCopied).catch(() => {
+    // Last resort: select text in a temporary input, no ugly prompt
+    const tmp = document.createElement('input');
+    tmp.value = url;
+    tmp.style.cssText = 'position:fixed;opacity:0;top:0;left:0;';
+    document.body.appendChild(tmp);
+    tmp.focus();
+    tmp.select();
+    try { document.execCommand('copy'); markCopied(); } catch(e) { showToast('Long-press the link to copy'); }
+    document.body.removeChild(tmp);
+  });
+}
+
+// ── MODAL HELPERS ─────────────────────────────────────────────────────────────
+
+function openModal(id) {
+  document.getElementById(id).classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+// Close on overlay click
+document.querySelectorAll('.modal-overlay').forEach(el => {
+  el.addEventListener('click', e => { if (e.target === el) closeModal(el.id); });
+});
+
+// ── TOAST ─────────────────────────────────────────────────────────────────────
+
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2400);
+}
+
+// ── FORM ERROR ────────────────────────────────────────────────────────────────
+
+function showFormError(msg) {
+  const el = document.getElementById('form-error');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+function clearFormError() {
+  document.getElementById('form-error').style.display = 'none';
+}
+
+// ── ESCAPE HTML ───────────────────────────────────────────────────────────────
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── PASSCODE ──────────────────────────────────────────────────────────────────
+
+const ADMIN_PASSCODE = '1998';
+let pcEntry = '';
+
+function openPasscode() {
+  pcEntry = '';
+  updateDots();
+  document.getElementById('passcode-error').textContent = '';
+  document.getElementById('passcode-signout-row').style.display = isAdmin ? 'block' : 'none';
+  document.getElementById('passcode-title').textContent = isAdmin ? 'Admin Options' : 'Admin Access';
+  openModal('modal-passcode');
+}
+
+function pcKey(digit) {
+  if (pcEntry.length >= 4) return;
+  pcEntry += digit;
+  updateDots();
+  if (pcEntry.length === 4) {
+    setTimeout(checkPasscode, 120);
+  }
+}
+
+function pcBack() { pcEntry = pcEntry.slice(0,-1); updateDots(); }
+function pcClear() { pcEntry = ''; updateDots(); document.getElementById('passcode-error').textContent = ''; }
+
+function updateDots() {
+  for (let i = 0; i < 4; i++) {
+    const dot = document.getElementById('dot-'+i);
+    dot.className = 'passcode-dot' + (i < pcEntry.length ? ' filled' : '');
+  }
+}
+
+function checkPasscode() {
+  if (pcEntry === ADMIN_PASSCODE) {
+    isAdmin = true;
+    localStorage.setItem('beach_admin', 'true');
+    closeModal('modal-passcode');
+    applyHouseTheme();
+    renderAll();
+    showToast('Admin mode on ✓');
+  } else {
+    document.getElementById('passcode-error').textContent = 'Incorrect passcode. Try again.';
+    pcEntry = '';
+    updateDots();
+  }
+}
+
+function signOutAdmin() {
+  isAdmin = false;
+  localStorage.removeItem('beach_admin');
+  closeModal('modal-passcode');
+  applyHouseTheme();
+  renderAll();
+  showToast('Signed out of admin');
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+
+// Wire date inputs to live overlap check
+document.getElementById('f-start').addEventListener('change', updateOverlapWarning);
+document.getElementById('f-end').addEventListener('change', updateOverlapWarning);
+
+// Check URL param OR persisted admin session
+if (params.get('admin') === 'true' || localStorage.getItem('beach_admin') === 'true') {
+  isAdmin = true;
+}
+
+loadBookings();
+loadEvents();
+switchView('calendar');
+
+</script>
+</body>
+</html>
