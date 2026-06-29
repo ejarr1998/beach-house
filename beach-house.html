@@ -765,6 +765,8 @@
     <input class="form-input" id="ev-date" type="date">
     <label class="form-label" style="margin-top:14px;">Emoji / Icon (optional)</label>
     <input class="form-input" id="ev-emoji" type="text" placeholder="🎉" maxlength="4" style="width:80px;">
+    <label class="form-label" style="margin-top:14px;">Description (optional)</label>
+    <textarea class="form-input" id="ev-description" rows="2" placeholder="Any details about this event…" style="resize:vertical;"></textarea>
     <label class="form-label" style="margin-top:14px;">Visibility</label>
     <div style="display:flex;gap:8px;margin-top:4px;">
       <button id="ev-public-btn" onclick="setEventVisibility('public')"
@@ -1974,6 +1976,7 @@ function openEventForm(date, eventId) {
   document.getElementById('ev-save-btn').textContent = ev ? 'Save Event' : 'Add Event';
   document.getElementById('ev-name').value = ev ? ev.name : '';
   document.getElementById('ev-emoji').value = ev ? (ev.emoji || '') : '🎉';
+  document.getElementById('ev-description').value = ev ? (ev.description || '') : '';
   document.getElementById('ev-date').value = ev ? ev.date : (date || toYMD(new Date()));
   document.getElementById('ev-error').style.display = 'none';
   setEventVisibility(ev ? ev.visibility : 'public');
@@ -2001,15 +2004,16 @@ function saveEvent() {
   const name = document.getElementById('ev-name').value.trim();
   const date = document.getElementById('ev-date').value;
   const emoji = document.getElementById('ev-emoji').value.trim() || '🎉';
+  const description = document.getElementById('ev-description').value.trim();
   const errEl = document.getElementById('ev-error');
   if (!name) { errEl.textContent = 'Event name is required.'; errEl.style.display = 'block'; return; }
   if (!date) { errEl.textContent = 'Please set a date.'; errEl.style.display = 'block'; return; }
 
   if (editingEventId) {
-    events = events.map(e => e.id === editingEventId ? { ...e, name, date, emoji, visibility: currentEventVisibility } : e);
+    events = events.map(e => e.id === editingEventId ? { ...e, name, date, emoji, description, visibility: currentEventVisibility } : e);
     showToast('Event updated ✓');
   } else {
-    events.push({ id: Date.now().toString(), name, date, emoji, visibility: currentEventVisibility });
+    events.push({ id: Date.now().toString(), name, date, emoji, description, visibility: currentEventVisibility });
     showToast('Event added ✓');
   }
   saveEvents();
@@ -2047,6 +2051,7 @@ function renderDayEvents() {
         <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;">
           <span style="font-size:22px;flex-shrink:0;">${ev.emoji || '🎉'}</span>
           <div style="font-family:-apple-system,sans-serif;font-size:14px;font-weight:700;color:var(--ink);">${escHtml(ev.name)}${privBadge}</div>
+        ${ev.description ? `<div style="font-family:-apple-system,sans-serif;font-size:12px;color:var(--muted);margin-top:3px;">${escHtml(ev.description)}</div>` : ''}
         </div>
         ${isAdmin ? `<div style="display:flex;gap:6px;">
           <button class="btn btn-ghost" onclick="closeModal('modal-day');openEventForm('${ev.date}','${ev.id}')" style="padding:6px 10px;font-size:12px;">Edit</button>
