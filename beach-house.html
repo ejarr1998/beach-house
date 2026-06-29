@@ -811,16 +811,18 @@
       <button class="btn btn-ghost" id="f-names-btn" onclick="closeModal('modal-form');openNamesModal()" style="width:100%;justify-content:center;padding:11px;">👥 Add / Edit Guest Names</button>
       <button class="btn btn-ghost" id="f-move-btn" onclick="moveToOtherHouse()" style="width:100%;justify-content:center;padding:11px;"></button>
     </div>
-    <div class="form-actions" style="padding-top:14px;border-top:1px solid var(--border);flex-shrink:0;margin-top:14px;">
-      <button class="btn btn-ghost" onclick="closeModal('modal-form')">Cancel</button>
-      <button class="btn btn-primary" id="form-save-btn" onclick="saveBooking()" style="background:var(--accent)">Add Reservation</button>
+    <div style="position:sticky;bottom:0;background:#fff;padding:16px 0 20px;margin-top:16px;border-top:1px solid #e2e2dc;">
+      <div class="form-actions" style="margin:0;">
+        <button class="btn btn-ghost" onclick="closeModal('modal-form')">Cancel</button>
+        <button class="btn btn-primary" id="form-save-btn" onclick="saveBooking()" style="background:var(--accent)">Add Reservation</button>
+      </div>
     </div>
   </div>
 </div>
 
 <!-- Guest names modal -->
 <div class="modal-overlay" id="modal-names">
-  <div class="modal-box">
+  <div class="modal-box" style="padding-bottom:0;">
     <div class="modal-header">
       <div>
         <div class="modal-title" id="names-modal-title">Who's coming?</div>
@@ -829,9 +831,11 @@
       <button class="modal-close" onclick="closeModal('modal-names')">×</button>
     </div>
     <p style="font-family:-apple-system,sans-serif;font-size:13px;color:var(--light-muted);margin-bottom:14px;">All names are optional — fill in as many as you like.</p>
-    <div id="names-fields" style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px;"></div>
-    <button onclick="saveGuestNames()" style="display:block;width:100%;padding:13px;border-radius:8px;border:none;background:var(--accent);font-family:-apple-system,sans-serif;font-size:15px;font-weight:700;color:#fff;cursor:pointer;margin-bottom:10px;">Save Names</button>
-    <button onclick="skipGuestNames()" style="display:block;width:100%;padding:11px;border-radius:8px;border:2px solid #e2e2dc;background:transparent;font-family:-apple-system,sans-serif;font-size:14px;font-weight:700;color:#556677;cursor:pointer;">Skip</button>
+    <div id="names-fields" style="display:flex;flex-direction:column;gap:8px;"></div>
+    <div style="position:sticky;bottom:0;background:#fff;padding:16px 0 20px;margin-top:16px;border-top:1px solid #e2e2dc;">
+      <button onclick="saveGuestNames()" style="display:block;width:100%;padding:14px;border-radius:8px;border:none;background:var(--accent);font-family:-apple-system,sans-serif;font-size:15px;font-weight:700;color:#fff;cursor:pointer;margin-bottom:10px;">Save Names</button>
+      <button onclick="skipGuestNames()" style="display:block;width:100%;padding:12px;border-radius:8px;border:2px solid #e2e2dc;background:transparent;font-family:-apple-system,sans-serif;font-size:14px;font-weight:700;color:#556677;cursor:pointer;">Skip</button>
+    </div>
   </div>
 </div>
 
