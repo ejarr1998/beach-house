@@ -1124,6 +1124,43 @@ function updateTabStyles(v) {
   if (activeTab) activeTab.scrollIntoView({ inline: 'nearest', behavior: 'smooth' });
 }
 
+// ── SEASONAL ACCENTS ──────────────────────────────────────────────────────────
+
+const SEASON_CONFIG = {
+  0:  { emoji: '🌊', gradient: 'linear-gradient(90deg, #a8c8e8 0%, #d4e8f4 100%)' }, // Jan
+  1:  { emoji: '🌊', gradient: 'linear-gradient(90deg, #a8c8e8 0%, #d4e8f4 100%)' }, // Feb
+  2:  { emoji: '🌿', gradient: 'linear-gradient(90deg, #a8d4b0 0%, #d4ecd8 100%)' }, // Mar
+  3:  { emoji: '🌸', gradient: 'linear-gradient(90deg, #f0c0d0 0%, #fce8ee 100%)' }, // Apr
+  4:  { emoji: '🌺', gradient: 'linear-gradient(90deg, #f4c870 0%, #fde8b0 100%)' }, // May
+  5:  { emoji: '🐚', gradient: 'linear-gradient(90deg, #a8d8d8 0%, #d4f0ee 100%)' }, // Jun
+  6:  { emoji: '☀️', gradient: 'linear-gradient(90deg, #f8d878 0%, #fef0c0 100%)' }, // Jul
+  7:  { emoji: '🌴', gradient: 'linear-gradient(90deg, #f0b860 0%, #fce4a0 100%)' }, // Aug
+  8:  { emoji: '🌾', gradient: 'linear-gradient(90deg, #d4a870 0%, #ecdcc0 100%)' }, // Sep
+  9:  { emoji: '🍂', gradient: 'linear-gradient(90deg, #d88848 0%, #f0c898 100%)' }, // Oct
+  10: { emoji: '🌙', gradient: 'linear-gradient(90deg, #9898c8 0%, #d0d0e8 100%)' }, // Nov
+  11: { emoji: '✨', gradient: 'linear-gradient(90deg, #90b8d0 0%, #cce0ec 100%)' }, // Dec
+};
+
+function makeMonthHeading(m, y) {
+  const season = SEASON_CONFIG[m];
+  const wrap = document.createElement('div');
+  wrap.style.marginBottom = '14px';
+
+  // Thin gradient bar
+  const bar = document.createElement('div');
+  bar.style.cssText = `height:3px;border-radius:2px;background:${season.gradient};margin-bottom:8px;opacity:0.7;`;
+  wrap.appendChild(bar);
+
+  // Month label with emoji
+  const label = document.createElement('div');
+  label.className = 'tl-month-heading';
+  label.style.marginBottom = '0';
+  label.textContent = `${season.emoji}  ${MONTHS[m]} ${y}`;
+  wrap.appendChild(label);
+
+  return wrap;
+}
+
 // ── CALENDAR SUB-TABS ─────────────────────────────────────────────────────────
 
 function setCalTab(tab) {
@@ -1163,9 +1200,7 @@ function renderCalTimeline() {
     if (monthBookings.length === 0) { cur = new Date(y, m + 1, 1); continue; }
     const section = document.createElement('div');
     section.className = 'tl-month-section';
-    const heading = document.createElement('div');
-    heading.className = 'tl-month-heading';
-    heading.textContent = `${MONTHS[m]} ${y}`;
+    const heading = makeMonthHeading(m, y);
     section.appendChild(heading);
     const tickDays = [1, Math.round(daysInMonth*.25), Math.round(daysInMonth*.5), Math.round(daysInMonth*.75), daysInMonth];
     const axisRow = document.createElement('div'); axisRow.className = 'tl-axis-row';
@@ -1220,7 +1255,7 @@ function renderCalTimeline() {
 // ── CALENDAR RENDER ──────────────────────────────────────────────────────────
 
 function renderCalendar() {
-  document.getElementById('cal-month-label').textContent = `${MONTHS[calMonth]} ${calYear}`;
+  document.getElementById('cal-month-label').textContent = `${SEASON_CONFIG[calMonth].emoji}  ${MONTHS[calMonth]} ${calYear}`;
   const grid = document.getElementById('cal-grid');
   grid.innerHTML = '';
 
@@ -1392,9 +1427,7 @@ function renderTimeline() {
     section.className = 'tl-month-section';
 
     // Heading
-    const heading = document.createElement('div');
-    heading.className = 'tl-month-heading';
-    heading.textContent = `${MONTHS[m]} ${y}`;
+    const heading = makeMonthHeading(m, y);
     section.appendChild(heading);
 
     // Axis labels row
@@ -1563,9 +1596,7 @@ function renderBoth() {
     section.className = 'tl-month-section';
 
     // Month heading
-    const heading = document.createElement('div');
-    heading.className = 'tl-month-heading';
-    heading.textContent = `${MONTHS[m]} ${y}`;
+    const heading = makeMonthHeading(m, y);
     section.appendChild(heading);
 
     // Shared axis
@@ -1737,7 +1768,7 @@ function renderBothPeople() {
   let month = new Date().getMonth();
 
   function drawCalendar() {
-    monthLabel.textContent = `${MONTHS[month]} ${year}`;
+    monthLabel.textContent = `${SEASON_CONFIG[month].emoji}  ${MONTHS[month]} ${year}`;
     gridWrap.innerHTML = '';
 
     const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -2626,10 +2657,16 @@ if (params.get('admin') === 'true' || localStorage.getItem('beach_admin') === 't
   isAdmin = true;
 }
 
+// Set house from URL param if present
+if (params.get('house') && HOUSES[params.get('house')]) {
+  currentHouse = params.get('house');
+}
+
+applyHouseTheme();
+switchView('calendar');
 loadBookings();
 loadAllHouses();
 loadEvents();
-switchView('calendar');
 
 </script>
 </body>
