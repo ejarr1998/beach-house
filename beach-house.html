@@ -2417,7 +2417,10 @@ function confirmDelete() {
 // ── SHARE ────────────────────────────────────────────────────────────────────
 
 function copyShareLink() {
-  const url = `${location.origin}${location.pathname}?house=${currentHouse}`;
+  const base = (location.protocol === 'file:' || location.hostname === 'localhost')
+    ? 'https://ejarr1998.github.io/beach-house/beach-house.html'
+    : `${location.origin}${location.pathname}`;
+  const url = `${base}?house=${currentHouse}`;
   const btn = document.getElementById('share-btn');
   const label = document.getElementById('share-btn-label');
   const icon = document.getElementById('share-btn-icon');
