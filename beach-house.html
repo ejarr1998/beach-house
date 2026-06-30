@@ -237,6 +237,10 @@
     color: var(--ink);
   }
   .cal-grid {
+    display: flex;
+    flex-direction: column;
+  }
+  .cal-grid-simple {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
     gap: 3px;
@@ -251,19 +255,18 @@
     padding: 4px 0 6px;
   }
   .cal-cell {
-    min-height: 58px;
+    min-height: 64px;
+    height: 100%;
     border-radius: 8px;
-    padding: 5px 6px;
+    padding: 5px 4px 4px;
     cursor: pointer;
     transition: background 0.12s;
     background: #fafaf8;
     border: 2px solid transparent;
     position: relative;
-    overflow: hidden;
   }
   .cal-cell:hover { background: #eef5f5; }
   .cal-cell.today { border-color: var(--accent, #4A8B8C); background: var(--accent-light, #D6ECEC); }
-  .cal-cell.has-bookings { background: #f0f7f6; }
   .cal-cell-day {
     font-size: 13px;
     font-weight: 500;
@@ -271,23 +274,49 @@
     line-height: 1;
   }
   .cal-cell.today .cal-cell-day { font-weight: 800; }
-  .cal-chip {
-    margin-top: 2px;
+
+  /* Week row wrapper holds both the day cells and the overlaid bars */
+  .cal-week-row {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 3px;
+    margin-bottom: 3px;
+  }
+  .cal-bars-layer {
+    position: absolute;
+    left: 0; right: 0;
+    top: 28px; /* sits below the day number */
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    pointer-events: none;
+  }
+  .cal-bar {
+    position: relative;
+    height: 16px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    padding: 0 6px;
+    pointer-events: none;
+    overflow: hidden;
+  }
+  .cal-bar-label {
+    font-family: -apple-system, sans-serif;
     font-size: 10px;
-    font-weight: 600;
+    font-weight: 700;
     color: #fff;
-    border-radius: 3px;
-    padding: 1px 5px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    font-family: -apple-system, sans-serif;
   }
   .cal-more {
-    font-size: 10px;
-    font-weight: 700;
-    margin-top: 2px;
     font-family: -apple-system, sans-serif;
+    font-size: 9px;
+    font-weight: 700;
+    color: var(--light-muted);
+    padding: 0 2px;
   }
 
   /* ── UPCOMING LIST ── */
@@ -1343,66 +1372,144 @@ function renderCalendar() {
   const grid = document.getElementById('cal-grid');
   grid.innerHTML = '';
 
-  // Headers
+  // Day-of-week headers (separate from week rows)
+  const headerRow = document.createElement('div');
+  headerRow.style.cssText = 'display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:2px;';
   DAYS_SHORT.forEach(d => {
     const el = document.createElement('div');
     el.className = 'cal-day-header';
     el.textContent = d;
-    grid.appendChild(el);
+    headerRow.appendChild(el);
   });
+  grid.appendChild(headerRow);
 
   const firstDay = new Date(calYear, calMonth, 1).getDay();
-  const daysInMonth = new Date(calYear, calMonth+1, 0).getDate();
+  const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
   const tYMD = todayYMD();
 
-  for (let i = 0; i < firstDay; i++) {
-    grid.appendChild(document.createElement('div'));
-  }
+  // Build a flat list of cells: null for empty, or day number
+  const cells = [];
+  for (let i = 0; i < firstDay; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+  while (cells.length % 7 !== 0) cells.push(null);
 
-  for (let d = 1; d <= daysInMonth; d++) {
-    const ymd = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-    const dayB = bookingsForDate(ymd);
-    const isToday = ymd === tYMD;
+  // Process week by week (rows of 7)
+  for (let w = 0; w < cells.length; w += 7) {
+    const weekCells = cells.slice(w, w + 7);
+    const weekRow = document.createElement('div');
+    weekRow.className = 'cal-week-row';
 
-    const dayEvts = eventsForDate(ymd);
-    const cell = document.createElement('div');
-    cell.className = 'cal-cell' + (isToday ? ' today' : '') + (dayB.length > 0 ? ' has-bookings' : '');
-    cell.onclick = () => openDayDetail(ymd);
+    // Day cells
+    weekCells.forEach(d => {
+      const cellWrap = document.createElement('div');
+      if (d === null) { weekRow.appendChild(cellWrap); return; }
 
-    const dayNum = document.createElement('div');
-    dayNum.className = 'cal-cell-day';
-    dayNum.textContent = d;
-    if (isToday) dayNum.style.color = house().accentDark;
+      const ymd = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      const isToday = ymd === tYMD;
+      const dayEvts = eventsForDate(ymd);
 
-    // Event dot indicator in top-right if events exist
-    if (dayEvts.length > 0) {
-      dayNum.style.display = 'flex';
-      dayNum.style.justifyContent = 'space-between';
-      dayNum.style.alignItems = 'center';
-      const dot = document.createElement('span');
-      dot.textContent = dayEvts[0].emoji || '🎉';
-      dot.style.fontSize = '9px';
-      dayNum.appendChild(dot);
-    }
-    cell.appendChild(dayNum);
+      cellWrap.className = 'cal-cell' + (isToday ? ' today' : '');
+      cellWrap.onclick = () => openDayDetail(ymd);
 
-    dayB.slice(0,2).forEach(b => {
-      const chip = document.createElement('div');
-      chip.className = 'cal-chip';
-      chip.style.background = guestColor(b.name);
-      chip.textContent = b.name;
-      cell.appendChild(chip);
+      const dayNum = document.createElement('div');
+      dayNum.className = 'cal-cell-day';
+      dayNum.textContent = d;
+      if (isToday) dayNum.style.color = house().accentDark;
+
+      if (dayEvts.length > 0) {
+        dayNum.style.display = 'flex';
+        dayNum.style.justifyContent = 'space-between';
+        dayNum.style.alignItems = 'center';
+        const dot = document.createElement('span');
+        dot.textContent = dayEvts[0].emoji || '🎉';
+        dot.style.fontSize = '9px';
+        dayNum.appendChild(dot);
+      }
+      cellWrap.appendChild(dayNum);
+      weekRow.appendChild(cellWrap);
     });
 
-    if (dayB.length > 2) {
-      const more = document.createElement('div');
-      more.className = 'cal-more';
-      more.style.color = house().accentDark;
-      more.textContent = `+${dayB.length-2} more`;
-      cell.appendChild(more);
+    grid.appendChild(weekRow);
+
+    // Now overlay bars for bookings that touch this week
+    const weekStart = weekCells.find(d => d !== null);
+    if (weekStart === undefined) continue;
+
+    // Get actual date range for this week's visible days
+    const weekDates = weekCells.map(d => d === null ? null :
+      `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`);
+
+    // Find all bookings touching any day in this week
+    const weekBookingsSet = new Map();
+    weekDates.forEach(ymd => {
+      if (!ymd) return;
+      bookingsForDate(ymd).forEach(b => weekBookingsSet.set(b.id, b));
+    });
+    const weekBookings = [...weekBookingsSet.values()].sort((a,b) => a.start.localeCompare(b.start));
+
+    if (weekBookings.length === 0) continue;
+
+    // Assign each booking to a lane (row) to avoid overlap, max 2 lanes shown + "more"
+    const lanes = []; // each lane: array of bookings
+    const bookingLane = {};
+    weekBookings.forEach(b => {
+      let placed = false;
+      for (let li = 0; li < lanes.length; li++) {
+        const overlaps = lanes[li].some(other =>
+          !(b.end < other.start || b.start > other.end)
+        );
+        if (!overlaps) { lanes[li].push(b); bookingLane[b.id] = li; placed = true; break; }
+      }
+      if (!placed) { lanes.push([b]); bookingLane[b.id] = lanes.length - 1; }
+    });
+
+    const maxLanesShown = lanes.length; // show all lanes, no cap
+    const barsLayer = document.createElement('div');
+    barsLayer.className = 'cal-bars-layer';
+
+    for (let li = 0; li < lanes.length; li++) {
+      lanes[li].forEach(b => {
+        // Find start/end column index within this week (0-6)
+        let startCol = -1, endCol = -1;
+        weekDates.forEach((ymd, idx) => {
+          if (!ymd) return;
+          if (ymd >= b.start && ymd <= b.end) {
+            if (startCol === -1) startCol = idx;
+            endCol = idx;
+          }
+        });
+        if (startCol === -1) return;
+
+        const color = guestColor(b.name);
+        const bar = document.createElement('div');
+        bar.className = 'cal-bar';
+        bar.style.background = color;
+        bar.style.gridColumn = `${startCol + 1} / ${endCol + 2}`;
+        bar.style.gridRow = `${li + 1}`;
+        bar.style.pointerEvents = 'none';
+        bar.title = `${b.name}: ${formatRange(b.start, b.end)}`;
+
+        const label = document.createElement('div');
+        label.className = 'cal-bar-label';
+        label.textContent = b.name;
+        bar.appendChild(label);
+
+        barsLayer.appendChild(bar);
+      });
     }
 
-    grid.appendChild(cell);
+    // Make barsLayer a CSS grid matching the week row so gridColumn works
+    barsLayer.style.display = 'grid';
+    barsLayer.style.gridTemplateColumns = 'repeat(7, 1fr)';
+    barsLayer.style.gridAutoRows = '16px';
+    barsLayer.style.gridTemplateRows = `repeat(${lanes.length}, 16px)`;
+    barsLayer.style.gap = '3px';
+
+    weekRow.appendChild(barsLayer);
+    // Adjust week row min-height to fit all bars
+    if (lanes.length > 0) {
+      weekRow.style.minHeight = `${64 + lanes.length * 19}px`;
+    }
   }
 }
 
@@ -1954,7 +2061,7 @@ function renderBothPeople() {
     const firstDay = new Date(year, month, 1).getDay();
 
     const grid = document.createElement('div');
-    grid.className = 'cal-grid';
+    grid.className = 'cal-grid-simple';
 
     DAYS_SHORT.forEach(d => {
       const hdr = document.createElement('div');
