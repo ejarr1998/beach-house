@@ -761,12 +761,14 @@
     </div>
     <div id="view-timeline" style="display:none;"><div id="timeline-content"></div></div>
     <div id="view-both" style="display:none;">
-      <div style="display:flex;gap:6px;margin-bottom:16px;">
+      <div style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;">
         <button id="both-tab-people" onclick="setBothTab('people')" style="font-family:-apple-system,sans-serif;font-size:12px;font-weight:700;padding:5px 14px;border-radius:20px;border:2px solid var(--accent);background:var(--accent);color:#fff;cursor:pointer;">👥 People</button>
         <button id="both-tab-timeline" onclick="setBothTab('timeline')" style="font-family:-apple-system,sans-serif;font-size:12px;font-weight:700;padding:5px 14px;border-radius:20px;border:2px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;">Timeline</button>
+        <button id="both-tab-rooms" onclick="setBothTab('rooms')" style="font-family:-apple-system,sans-serif;font-size:12px;font-weight:700;padding:5px 14px;border-radius:20px;border:2px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;">🛏 Rooms</button>
       </div>
       <div id="both-people-content"></div>
       <div id="both-content" style="display:none;"></div>
+      <div id="both-rooms-content" style="display:none;"></div>
     </div>
   </div>
 </div>
@@ -1019,6 +1021,29 @@ const GUEST_COLORS = ['#D4756B','#5B94BC','#6BAD6B','#9B72B8','#C4A04A','#52A8A0
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 const DAYS_SHORT = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 
+// ── ROOMS ─────────────────────────────────────────────────────────────────────
+const HOUSE_ROOMS = {
+  port: [
+    { id: 'master',  label: 'Master Bedroom' },
+    { id: 'bumper',  label: 'Bumper Pool Room' },
+    { id: 'seaview', label: 'Sea View Room' },
+    { id: 'ansley',  label: "Ansley's Room" },
+    { id: 'stairs',  label: 'Top of Stairs' },
+    { id: 'office',  label: 'Office' },
+  ],
+  royal: [
+    { id: 'master',   label: 'Master Bedroom' },
+    { id: 'bunk',     label: 'Bunkbed Room' },
+    { id: 'garage',   label: 'Over Garage' },
+    { id: 'kitchen',  label: 'Over Kitchen' },
+    { id: 'stairbed', label: 'Stair Bed' },
+  ],
+};
+let roomAssign = {};          // personKey ("bookingId~index") -> "house:roomId"
+let roomFocusHouse = 'port';  // which house's rooms are shown
+let roomsExpanded = {};       // bookingId -> bool (tray expand state)
+let currentBothTab = 'people';
+
 // ── STATE ────────────────────────────────────────────────────────────────────
 
 const params = new URLSearchParams(location.search);
@@ -1102,6 +1127,21 @@ function saveEvents() {
   const obj = {};
   events.forEach(e => { obj[e.id] = e; });
   db.ref('events').set(obj);
+}
+
+let roomsListener = null;
+function loadRooms() {
+  if (roomsListener) roomsListener();
+  const ref = db.ref('roomAssignments');
+  ref.on('value', snap => {
+    roomAssign = snap.val() || {};
+    if (currentView === 'both' && currentBothTab === 'rooms') renderBothRooms();
+  });
+  roomsListener = () => ref.off();
+}
+
+function saveRoomAssign() {
+  db.ref('roomAssignments').set(roomAssign);
 }
 
 function formatTime(time) {
@@ -1990,27 +2030,234 @@ function renderBoth() {
 // ── BOTH TAB SWITCHER ─────────────────────────────────────────────────────────
 
 function setBothTab(tab) {
-  const tlBtn  = document.getElementById('both-tab-timeline');
+  currentBothTab = tab;
   const pepBtn = document.getElementById('both-tab-people');
-  const tlBody  = document.getElementById('both-content');
+  const tlBtn  = document.getElementById('both-tab-timeline');
+  const rmBtn  = document.getElementById('both-tab-rooms');
   const pepBody = document.getElementById('both-people-content');
+  const tlBody  = document.getElementById('both-content');
+  const rmBody  = document.getElementById('both-rooms-content');
   const accent = house().accent;
   const activeStyle  = `font-family:-apple-system,sans-serif;font-size:12px;font-weight:700;padding:5px 14px;border-radius:20px;border:2px solid ${accent};background:${accent};color:#fff;cursor:pointer;`;
   const inactiveStyle = `font-family:-apple-system,sans-serif;font-size:12px;font-weight:700;padding:5px 14px;border-radius:20px;border:2px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;`;
 
-  if (tab === 'people') {
-    pepBtn.style.cssText = activeStyle;
-    tlBtn.style.cssText  = inactiveStyle;
-    pepBody.style.display = '';
-    tlBody.style.display  = 'none';
-    renderBothPeople();
-  } else {
-    tlBtn.style.cssText  = activeStyle;
-    pepBtn.style.cssText = inactiveStyle;
-    tlBody.style.display  = '';
-    pepBody.style.display = 'none';
-    renderBoth();
+  pepBtn.style.cssText = tab === 'people'   ? activeStyle : inactiveStyle;
+  tlBtn.style.cssText  = tab === 'timeline' ? activeStyle : inactiveStyle;
+  rmBtn.style.cssText  = tab === 'rooms'    ? activeStyle : inactiveStyle;
+
+  pepBody.style.display = tab === 'people'   ? '' : 'none';
+  tlBody.style.display  = tab === 'timeline' ? '' : 'none';
+  rmBody.style.display  = tab === 'rooms'    ? '' : 'none';
+
+  if (tab === 'people')        renderBothPeople();
+  else if (tab === 'timeline') renderBoth();
+  else                         renderBothRooms();
+}
+
+// ── ROOM ASSIGNMENT ───────────────────────────────────────────────────────────
+
+// Current + upcoming reservations across both houses, stable order (for colors)
+function roomsBookings() {
+  const t = todayYMD();
+  const out = [];
+  ['port', 'royal'].forEach(hk => {
+    (allHouseBookings[hk] || []).forEach(b => {
+      if (b.end >= t) out.push({ ...b, _house: hk });
+    });
+  });
+  out.sort((a, b) => (a.start + a.id).localeCompare(b.start + b.id));
+  out.forEach((b, i) => { b._color = GUEST_COLORS[i % GUEST_COLORS.length]; });
+  return out;
+}
+
+// One entry per guest slot (named or "Guest N")
+function roomsPeople(b) {
+  const names = Array.isArray(b.individuals) ? b.individuals.filter(Boolean) : [];
+  const list = [];
+  for (let i = 0; i < b.guests; i++) {
+    list.push({
+      key: `${b.id}~${i}`,
+      name: names[i] || `Guest ${i + 1}`,
+      color: b._color,
+      bookingId: b.id,
+    });
   }
+  return list;
+}
+
+function setRoomFocus(hk) { roomFocusHouse = hk; renderBothRooms(); }
+function toggleRoomGroup(id) { roomsExpanded[id] = !roomsExpanded[id]; renderBothRooms(); }
+function resetRooms() {
+  if (!isAdmin) return;
+  roomAssign = {};
+  saveRoomAssign();
+  renderBothRooms();
+}
+
+function roomsAssignApply(dragStr, dropStr) {
+  const ci = dragStr.indexOf(':');
+  const kind = dragStr.slice(0, ci), id = dragStr.slice(ci + 1);
+  let keys;
+  if (kind === 'group') {
+    const b = roomsBookings().find(x => x.id === id);
+    keys = b ? roomsPeople(b).map(p => p.key) : [];
+  } else {
+    keys = [id];
+  }
+  const next = { ...roomAssign };
+  if (dropStr === 'tray') {
+    keys.forEach(k => { delete next[k]; });
+  } else {
+    const loc = dropStr.slice(5); // strip "room:" -> "house:roomId"
+    keys.forEach(k => { next[k] = loc; });
+  }
+  roomAssign = next;
+  saveRoomAssign();
+  renderBothRooms();
+}
+
+function renderBothRooms() {
+  const container = document.getElementById('both-rooms-content');
+  if (!container) return;
+
+  const bookings = roomsBookings();
+  const personByKey = {};
+  bookings.forEach(b => roomsPeople(b).forEach(p => { personByKey[p.key] = p; }));
+
+  const fh = roomFocusHouse;
+  const acc = HOUSES[fh].accent;
+
+  // ── House switcher ──
+  let html = `<div style="display:flex;gap:8px;margin-bottom:14px;">`;
+  ['port', 'royal'].forEach(hk => {
+    const active = hk === fh;
+    const a = HOUSES[hk].accent;
+    html += `<button onclick="setRoomFocus('${hk}')" style="flex:1;font-family:-apple-system,sans-serif;font-size:13px;font-weight:700;padding:9px 0;border-radius:9px;cursor:pointer;border:2px solid ${active ? a : 'var(--border)'};background:${active ? a : 'transparent'};color:${active ? '#fff' : 'var(--muted)'};">${HOUSES[hk].short}</button>`;
+  });
+  html += `</div>`;
+
+  // ── Tray of unassigned people ──
+  const groups = bookings
+    .map(b => ({ b, ppl: roomsPeople(b).filter(p => !roomAssign[p.key]) }))
+    .filter(g => g.ppl.length);
+  const grab = isAdmin ? 'cursor:grab;touch-action:none;' : '';
+
+  html += `<div data-rdrop="tray" data-raccent="#33403f" style="background:#fff;border:1.5px solid var(--border);border-radius:14px;padding:13px;margin-bottom:16px;position:sticky;top:8px;z-index:5;box-shadow:0 2px 14px rgba(0,0,0,.06);">`;
+  html += `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;"><span style="font-family:-apple-system,sans-serif;font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);">To assign</span>`;
+  if (isAdmin) html += `<button data-rnodrag onclick="resetRooms()" style="font-family:-apple-system,sans-serif;font-size:11px;font-weight:700;color:var(--muted);background:transparent;border:1.5px solid var(--border);border-radius:7px;padding:4px 10px;cursor:pointer;">↺ Reset</button>`;
+  html += `</div>`;
+
+  if (!groups.length) {
+    html += `<div style="font-family:-apple-system,sans-serif;font-size:13px;font-style:italic;color:#9aa19a;padding:2px 0 4px;">🎉 Everyone has a room.${isAdmin ? ' Drag anyone back here to unassign.' : ''}</div>`;
+  } else {
+    if (isAdmin) html += `<div style="font-family:-apple-system,sans-serif;font-size:11px;color:var(--light-muted);margin-bottom:9px;">Drag a family onto a room below — or tap ⌄ to place people one at a time.</div>`;
+    html += `<div style="display:flex;flex-wrap:wrap;gap:9px;">`;
+    groups.forEach(({ b, ppl }) => {
+      const expanded = !!roomsExpanded[b.id];
+      const gdrag = isAdmin ? `data-rdrag="group:${b.id}"` : '';
+      html += `<div style="display:flex;flex-direction:column;gap:6px;">`;
+      html += `<div ${gdrag} style="${grab}display:flex;align-items:center;gap:7px;padding:7px 7px 7px 12px;border-radius:11px;background:${b._color};color:#fff;box-shadow:0 2px 6px rgba(0,0,0,.14);">`;
+      html += `<span style="font-family:-apple-system,sans-serif;font-size:13px;font-weight:700;">${escHtml(b.name)}</span>`;
+      html += `<span style="font-family:-apple-system,sans-serif;font-size:10px;font-weight:700;background:rgba(255,255,255,.28);border-radius:20px;padding:2px 8px;">${ppl.length}</span>`;
+      html += `<button data-rnodrag onclick="toggleRoomGroup('${b.id}')" style="font-family:-apple-system,sans-serif;font-size:13px;font-weight:700;color:#fff;background:rgba(255,255,255,.2);border:none;border-radius:7px;width:24px;height:24px;cursor:pointer;line-height:1;padding:0;">${expanded ? '▴' : '⌄'}</button>`;
+      html += `</div>`;
+      if (expanded) {
+        html += `<div style="display:flex;flex-wrap:wrap;gap:5px;max-width:280px;">`;
+        ppl.forEach(p => {
+          const pdrag = isAdmin ? `data-rdrag="person:${p.key}"` : '';
+          html += `<div ${pdrag} style="${grab}display:inline-flex;align-items:center;gap:6px;padding:5px 9px;border-radius:8px;background:#fff;border:1.5px solid ${b._color};color:var(--ink);font-family:-apple-system,sans-serif;font-size:12px;font-weight:600;"><span style="width:8px;height:8px;border-radius:50%;background:${b._color};flex:none;"></span>${escHtml(p.name)}</div>`;
+        });
+        html += `</div>`;
+      }
+      html += `</div>`;
+    });
+    html += `</div>`;
+  }
+  html += `</div>`;
+
+  // ── Rooms for the focused house ──
+  HOUSE_ROOMS[fh].forEach(r => {
+    const loc = `${fh}:${r.id}`;
+    const occ = Object.keys(roomAssign).filter(k => roomAssign[k] === loc).map(k => personByKey[k]).filter(Boolean);
+    html += `<div data-rdrop="room:${fh}:${r.id}" data-raccent="${acc}" style="background:#fafaf8;border:1.5px dashed var(--border);border-radius:12px;padding:11px 12px;margin-bottom:8px;">`;
+    html += `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;"><span style="font-family:Georgia,serif;font-size:15px;font-weight:700;color:var(--ink);">${r.label}</span>${occ.length ? `<span style="font-family:-apple-system,sans-serif;font-size:11px;font-weight:700;color:var(--light-muted);">${occ.length} guest${occ.length > 1 ? 's' : ''}</span>` : ''}</div>`;
+    html += `<div style="display:flex;flex-wrap:wrap;gap:6px;min-height:30px;align-items:center;">`;
+    if (!occ.length) {
+      html += `<span style="font-family:-apple-system,sans-serif;font-size:12px;font-style:italic;color:#bdbdb1;">${isAdmin ? 'Drop guests here' : '—'}</span>`;
+    } else {
+      occ.forEach(p => {
+        const pdrag = isAdmin ? `data-rdrag="person:${p.key}"` : '';
+        html += `<div ${pdrag} style="${grab}display:inline-flex;align-items:center;gap:6px;padding:5px 9px;border-radius:8px;background:#fff;border:1.5px solid ${p.color};color:var(--ink);font-family:-apple-system,sans-serif;font-size:12px;font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.05);"><span style="width:8px;height:8px;border-radius:50%;background:${p.color};flex:none;"></span>${escHtml(p.name)}</div>`;
+      });
+    }
+    html += `</div></div>`;
+  });
+
+  container.innerHTML = html;
+  initRoomsDrag();
+}
+
+// ── Pointer-based drag engine (mouse + touch), scoped to the rooms board ──
+let roomsDragInit = false;
+let roomsDrag = null;
+function initRoomsDrag() {
+  if (roomsDragInit) return;
+  roomsDragInit = true;
+
+  document.addEventListener('pointerdown', e => {
+    if (!isAdmin) return;
+    const board = document.getElementById('both-rooms-content');
+    if (!board || board.style.display === 'none') return;
+    if (e.target.closest('[data-rnodrag]')) return;
+    const h = e.target.closest('[data-rdrag]');
+    if (!h || !board.contains(h)) return;
+    const r = h.getBoundingClientRect();
+    const ghost = h.cloneNode(true);
+    Object.assign(ghost.style, {
+      position: 'fixed', left: '0', top: '0', width: r.width + 'px', margin: '0',
+      pointerEvents: 'none', zIndex: '99999', opacity: '0.95',
+      transform: `translate(${r.left}px,${r.top}px) rotate(-3deg)`,
+      boxShadow: '0 16px 36px rgba(0,0,0,.3)',
+    });
+    document.body.appendChild(ghost);
+    roomsDrag = { drag: h.dataset.rdrag, el: h, ghost, ox: e.clientX - r.left, oy: e.clientY - r.top, over: null };
+    h.style.opacity = '0.32';
+    e.preventDefault();
+  }, { passive: false });
+
+  document.addEventListener('pointermove', e => {
+    const d = roomsDrag; if (!d) return;
+    d.ghost.style.transform = `translate(${e.clientX - d.ox}px,${e.clientY - d.oy}px) rotate(-3deg)`;
+    const m = 70;
+    if (e.clientY < m) window.scrollBy(0, -16);
+    else if (e.clientY > window.innerHeight - m) window.scrollBy(0, 16);
+    const tgt = roomsDropAt(e.clientX, e.clientY);
+    if (d.over && d.over !== tgt) { d.over.style.outline = ''; d.over.style.background = d.over._bg || ''; }
+    if (tgt && tgt !== d.over) {
+      d.over = tgt;
+      tgt._bg = tgt.style.background;
+      tgt.style.outline = '2.5px solid ' + (tgt.dataset.raccent || '#33403f');
+      tgt.style.outlineOffset = '2px';
+      tgt.style.background = 'rgba(74,139,140,.08)';
+    } else if (!tgt) { d.over = null; }
+    e.preventDefault();
+  }, { passive: false });
+
+  const up = e => {
+    const d = roomsDrag; if (!d) return;
+    const tgt = roomsDropAt(e.clientX, e.clientY);
+    if (tgt) { tgt.style.outline = ''; tgt.style.background = tgt._bg || ''; }
+    if (d.el) d.el.style.opacity = '';
+    if (d.ghost) d.ghost.remove();
+    roomsDrag = null;
+    if (tgt) roomsAssignApply(d.drag, tgt.dataset.rdrop);
+  };
+  document.addEventListener('pointerup', up);
+  document.addEventListener('pointercancel', up);
+}
+function roomsDropAt(x, y) {
+  const el = document.elementFromPoint(x, y);
+  return el ? el.closest('[data-rdrop]') : null;
 }
 
 function renderBothPeople() {
@@ -2247,7 +2494,7 @@ function renderAll() {
   renderCalendar();
   renderUpcoming();
   renderTimeline();
-  if (currentView === 'both') setBothTab('people');
+  if (currentView === 'both') setBothTab(currentBothTab);
   else renderBoth();
 }
 
@@ -3003,6 +3250,7 @@ switchView('calendar');
 loadBookings();
 loadAllHouses();
 loadEvents();
+loadRooms();
 
 </script>
 </body>
